@@ -55,12 +55,12 @@ export function LoginForm({ role }: LoginFormProps) {
     try {
       let userCredential;
       let userDoc;
-      const userEmail = values.email;
+      const userEmail = values.email.toLowerCase(); // Convert to lowercase
       const userPassword = values.password;
 
       if (isStudent) {
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, where("email", "==", userEmail.toLowerCase()));
+        const q = query(usersRef, where("email", "==", userEmail));
         const querySnapshot = await getDocs(q);
         
         if (querySnapshot.empty) {

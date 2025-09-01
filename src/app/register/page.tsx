@@ -39,13 +39,14 @@ export default function RegisterPage() {
     setLoading(true);
 
     const usn = `1AP${usnYear}${usnBranch}${usnRoll}`;
+    const userEmail = email.toLowerCase(); // Convert email to lowercase
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, userEmail, password);
       const user = userCredential.user;
 
       await setDoc(doc(db, 'users', user.uid), {
-        email: user.email,
+        email: user.email, // Use the email from the created user which is already lowercase
         usn: usn,
         role: 'student',
         status: 'pending',
