@@ -55,10 +55,12 @@ export function LoginForm({ role }: LoginFormProps) {
     try {
       let userCredential;
       let userDoc;
+      const userEmail = values.email;
+      const userPassword = values.password;
 
       if (isStudent) {
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, where("email", "==", values.email.toLowerCase()));
+        const q = query(usersRef, where("email", "==", userEmail.toLowerCase()));
         const querySnapshot = await getDocs(q);
         
         if (querySnapshot.empty) {
@@ -71,16 +73,16 @@ export function LoginForm({ role }: LoginFormProps) {
             throw new Error(`This email is not registered as a student account.`);
         }
 
-        userCredential = await signInWithEmailAndPassword(auth, userData.email, values.password);
+        userCredential = await signInWithEmailAndPassword(auth, userEmail, userPassword);
         userDoc = { id: userDocSnap.id, ...userData };
       } else {
         // Logic for Faculty and Admin
         try {
-            userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+            userCredential = await signInWithEmailAndPassword(auth, userEmail, userPassword);
         } catch (error: any) {
             // If the user doesn't exist and it's the admin email, create the account.
-            if (error.code === 'auth/user-not-found' && values.email === 'admin@gmail.com') {
-                userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+            if (error.code === 'auth/user-not-found' && userEmail === 'admin@gmail.com') {
+                userCredential = await createUserWithEmailAndPassword(auth, userEmail, userPassword);
             } else {
                 throw error; // Re-throw other errors
             }
@@ -92,7 +94,7 @@ export function LoginForm({ role }: LoginFormProps) {
         if (!userDocSnap.exists()) {
              // Create a user doc if it doesn't exist (for pre-seeded admins/faculty)
              const userData = {
-                email: values.email,
+                email: userEmail,
                 role: role.name.toLowerCase(),
                 status: 'approved',
                 createdAt: new Date(),
