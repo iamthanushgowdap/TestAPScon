@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -9,6 +10,7 @@ import {
   FileText,
   BotMessageSquare,
   ArrowRight,
+  Briefcase,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -25,7 +27,7 @@ import { motion } from 'framer-motion';
 
 const roles = [
   { name: 'Student', icon: GraduationCap, href: '/dashboard' },
-  { name: 'Faculty', icon: School, href: '/dashboard' },
+  { name: 'Faculty', icon: Briefcase, href: '/faculty/dashboard' },
   { name: 'Admin', icon: Shield, href: '/dashboard' },
 ];
 
