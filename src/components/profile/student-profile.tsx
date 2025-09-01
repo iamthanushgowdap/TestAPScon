@@ -29,7 +29,7 @@ interface StudentData {
 export default function StudentProfile() {
     const [userData, setUserData] = useState<StudentData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -59,7 +59,7 @@ export default function StudentProfile() {
 
     const handleSaveChanges = async () => {
         if (!auth.currentUser || !userData) return;
-        setIsEditing(true);
+        setIsSaving(true);
         const userRef = doc(db, "users", auth.currentUser.uid);
         try {
             await updateDoc(userRef, {
@@ -77,7 +77,7 @@ export default function StudentProfile() {
                 variant: "destructive",
             });
         } finally {
-            setIsEditing(false);
+            setIsSaving(false);
         }
     };
     
@@ -185,9 +185,9 @@ export default function StudentProfile() {
                                     <Input id="year" value={userData.year} readOnly />
                                 </div>
                             </div>
-                            <Button onClick={handleSaveChanges} disabled={isEditing}>
+                            <Button onClick={handleSaveChanges} disabled={isSaving}>
                                 <Save className="mr-2 h-4 w-4" /> 
-                                {isEditing ? 'Saving...' : 'Save Changes'}
+                                {isSaving ? 'Saving...' : 'Save Changes'}
                             </Button>
                         </CardContent>
                     </Card>

@@ -1,14 +1,17 @@
 
+'use client';
 
+import { useState, useEffect } from 'react';
 import AppLayout from "@/components/app-layout";
 import { ProactiveReminderCard } from "@/components/proactive-reminder-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Bot, BookCopy, ListTodo, Calendar, Clock, FileText, Wallet, Percent, PartyPopper } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
-import { Progress } from "@/components/ui/progress";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const scheduleItems = [
     { time: '09:00 AM', subject: 'Physics 101', location: 'Hall C' },
@@ -22,15 +25,46 @@ const assignmentItems = [
 ];
 
 export default function DashboardPage() {
+    const [user, setUser] = useState<User | null>(null);
+    const [userName, setUserName] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    setUserName(userData.name || currentUser.displayName);
+                } else {
+                    setUserName(currentUser.displayName);
+                }
+            } else {
+                setUser(null);
+                setUserName(null);
+            }
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+
     return (
         <AppLayout>
             <div className="p-4 sm:p-6 lg:p-8 space-y-8 relative">
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-headline text-foreground">
-                            Hi Tanushree 👋, Welcome Back!
-                        </h1>
+                        {loading ? (
+                             <Skeleton className="h-9 w-64" />
+                        ) : (
+                            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-headline text-foreground">
+                                Hi {userName || 'Student'} 👋, Welcome Back!
+                            </h1>
+                        )}
                         <p className="text-muted-foreground mt-1 text-sm sm:text-base">
                             Here’s your personalized dashboard for the day.
                         </p>

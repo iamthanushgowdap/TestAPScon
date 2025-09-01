@@ -11,13 +11,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
 export default function RegisterPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -45,10 +46,15 @@ export default function RegisterPage() {
       // Step 1: Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, userEmail, password);
       const user = userCredential.user;
+      
+      // Step 1.5: Update Firebase Auth profile with display name
+      await updateProfile(user, {
+        displayName: name,
+      });
 
       // Step 2: Create a corresponding user document in Firestore with the user's UID as the document ID
       await setDoc(doc(db, 'users', user.uid), {
-        email: user.email, // Store for reference, though UID is the primary link
+        name: name,
         usn: usn,
         role: 'student',
         status: 'pending',
@@ -97,6 +103,10 @@ export default function RegisterPage() {
           </CardHeader>
           <CardContent className="p-6 sm:p-8">
             <form onSubmit={handleRegister} className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="name">Full Name</Label>
+                    <Input id="name" type="text" placeholder="Your full name" required value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input id="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />

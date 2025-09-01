@@ -24,7 +24,7 @@ interface AdminData {
 export default function AdminProfile() {
     const [userData, setUserData] = useState<AdminData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -39,6 +39,12 @@ export default function AdminProfile() {
                         email: user.email || '',
                         photoURL: user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
                     });
+                } else {
+                     setUserData({
+                        name: user.displayName || 'Admin',
+                        email: user.email || '',
+                        photoURL: user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
+                    });
                 }
                 setLoading(false);
             } else {
@@ -50,7 +56,7 @@ export default function AdminProfile() {
     
     const handleSaveChanges = async () => {
         if (!auth.currentUser || !userData) return;
-        setIsEditing(true);
+        setIsSaving(true);
         const userRef = doc(db, "users", auth.currentUser.uid);
         try {
             await updateDoc(userRef, {
@@ -67,7 +73,7 @@ export default function AdminProfile() {
                 variant: "destructive",
             });
         } finally {
-            setIsEditing(false);
+            setIsSaving(false);
         }
     };
 
@@ -151,7 +157,7 @@ export default function AdminProfile() {
                                 <Label htmlFor="email">Email Address</Label>
                                 <Input id="email" type="email" value={userData.email} readOnly />
                             </div>
-                             <Button onClick={handleSaveChanges} disabled={isEditing}><Save className="mr-2 h-4 w-4" />{isEditing ? 'Saving...' : 'Save Changes'}</Button>
+                             <Button onClick={handleSaveChanges} disabled={isSaving}><Save className="mr-2 h-4 w-4" />{isSaving ? 'Saving...' : 'Save Changes'}</Button>
                         </CardContent>
                     </Card>
 
