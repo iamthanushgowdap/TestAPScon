@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { BotMessageSquare, LayoutDashboard, Users, Shield, Database, Megaphone, GraduationCap, Bell, BarChart, FileText } from 'lucide-react';
+import { BotMessageSquare, LayoutDashboard, Users, Shield, Database, Megaphone, GraduationCap, Bell, BarChart, FileText, UserCheck } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/approve', label: 'Approve Users', icon: UserCheck },
   { href: '#', label: 'User Management', icon: Users },
   { href: '#', label: 'Security', icon: Shield },
   { href: '#', label: 'Database', icon: Database },

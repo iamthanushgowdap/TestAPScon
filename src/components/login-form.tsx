@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Role {
   name: 'Student' | 'Faculty' | 'Admin';
@@ -29,7 +30,7 @@ interface LoginFormProps {
 }
 
 const studentSchema = z.object({
-  usn: z.string().min(1, 'USN is required'),
+  usn: z.string().min(1, 'USN is required').regex(/^1AP\d{2}[A-Z]{2,3}\d{3}$/, 'Invalid USN format'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
@@ -40,6 +41,7 @@ const facultyAdminSchema = z.object({
 
 export function LoginForm({ role }: LoginFormProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const isStudent = role.name === 'Student';
   const schema = isStudent ? studentSchema : facultyAdminSchema;
 
@@ -49,9 +51,30 @@ export function LoginForm({ role }: LoginFormProps) {
   });
 
   function onSubmit(values: z.infer<typeof schema>) {
-    console.log(values);
-    // On successful login, navigate to the role's dashboard
-    router.push(role.href);
+    // Simulate authentication
+    if (isStudent) {
+        const studentValues = values as z.infer<typeof studentSchema>;
+        if (studentValues.usn.toUpperCase() === '1AP23CS001' && studentValues.password === 'student123') {
+             router.push(role.href);
+        } else {
+            toast({
+                title: "Login Failed",
+                description: "Invalid USN or password, or account not approved.",
+                variant: "destructive",
+            });
+        }
+    } else {
+        const adminValues = values as z.infer<typeof facultyAdminSchema>;
+        if (adminValues.email === 'admin@gmail.com' && adminValues.password === 'admin123') {
+            router.push(role.href);
+        } else {
+             toast({
+                title: "Login Failed",
+                description: "Invalid email or password.",
+                variant: "destructive",
+            });
+        }
+    }
   }
 
   return (
@@ -70,9 +93,9 @@ export function LoginForm({ role }: LoginFormProps) {
               name="usn"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>USN</FormLabel>
+                  <FormLabel>USN (e.g., 1AP23CS001)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your USN" {...field} />
+                    <Input placeholder="Enter your full USN" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
