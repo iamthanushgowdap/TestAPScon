@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { BotMessageSquare, BookCopy, LayoutDashboard, ListTodo, GraduationCap, Bell, CalendarClock, PieChart, User as UserIcon } from 'lucide-react';
+import { BotMessageSquare, BookCopy, LayoutDashboard, ListTodo, GraduationCap, Bell, CalendarClock, PieChart, User as UserIcon, LogOut } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -27,7 +27,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from 'react';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -41,11 +46,50 @@ const navItems = [
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const currentPath = useCurrentPath();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
+
   const isAdmin = currentPath.includes('/admin');
   const isFaculty = currentPath.includes('/faculty');
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        if (currentUser) {
+            setUser(currentUser);
+        } else {
+            setUser(null);
+            if (!['/login', '/register', '/'].includes(pathname)) {
+                 router.push('/login');
+            }
+        }
+    });
+    return () => unsubscribe();
+  }, [pathname, router]);
+
+  const handleLogout = async () => {
+    try {
+        await signOut(auth);
+        toast({
+            title: 'Logged Out',
+            description: 'You have been successfully logged out.',
+        });
+        router.push('/login');
+    } catch (error) {
+        toast({
+            title: 'Logout Failed',
+            description: 'There was an error logging you out.',
+            variant: 'destructive',
+        });
+    }
+  };
+
   if (isFaculty || isAdmin) {
     return <>{children}</>
+  }
+  
+  if (!user && !['/login', '/register', '/'].includes(pathname)) {
+    return null; // Or a loading spinner
   }
 
   return (
@@ -89,8 +133,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                  <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Avatar className="h-9 w-9 cursor-pointer">
-                        <AvatarImage src="https://picsum.photos/100/100" alt="User" data-ai-hint="person avatar" />
-                        <AvatarFallback>T</AvatarFallback>
+                        <AvatarImage src={user?.photoURL || "https://picsum.photos/100/100"} alt="User" data-ai-hint="person avatar" />
+                        <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                     </Avatar>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -107,7 +151,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                       <span>Cera.AI Settings</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                     <DropdownMenuItem>Logout</DropdownMenuItem>
+                     <DropdownMenuItem onClick={handleLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Logout</span>
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
             </div>

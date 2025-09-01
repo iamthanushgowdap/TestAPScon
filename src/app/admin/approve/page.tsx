@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,34 +9,66 @@ import { Check, X, UserCheck, Search } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
+import { collection, query, where, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type StudentStatus = 'pending' | 'approved' | 'declined';
 
 interface PendingStudent {
-    id: number;
+    id: string;
     email: string;
     usn: string;
     branch: string;
     status: StudentStatus;
 }
 
-const initialStudents: PendingStudent[] = [
-    { id: 1, email: 'student1@example.com', usn: '1AP24CS001', branch: 'CSE', status: 'pending' },
-    { id: 2, email: 'student2@example.com', usn: '1AP24IS002', branch: 'ISE', status: 'pending' },
-    { id: 3, email: 'student3@example.com', usn: '1AP23EC003', branch: 'ECE', status: 'approved' },
-    { id: 4, email: 'student4@example.com', usn: '1AP23ME004', branch: 'MECH', status: 'declined' },
-];
-
 export default function ApproveUsersPage() {
-    const [students, setStudents] = useState<PendingStudent[]>(initialStudents);
+    const [students, setStudents] = useState<PendingStudent[]>([]);
+    const [loading, setLoading] = useState(true);
     const { toast } = useToast();
 
-    const handleApproval = (id: number, newStatus: 'approved' | 'declined') => {
-        setStudents(students.map(s => s.id === id ? { ...s, status: newStatus } : s));
-        toast({
-            title: `User ${newStatus}`,
-            description: `The student account has been successfully ${newStatus}.`,
+    useEffect(() => {
+        const q = query(collection(db, "users"), where("role", "==", "student"));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const fetchedStudents: PendingStudent[] = [];
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                fetchedStudents.push({
+                    id: doc.id,
+                    email: data.email,
+                    usn: data.usn,
+                    branch: data.branch,
+                    status: data.status,
+                });
+            });
+            setStudents(fetchedStudents.sort((a, b) => {
+                if (a.status === 'pending') return -1;
+                if (b.status === 'pending') return 1;
+                return 0;
+            }));
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching students: ", error);
+            toast({ title: "Error", description: "Failed to fetch student data.", variant: "destructive" });
+            setLoading(false);
         });
+
+        return () => unsubscribe();
+    }, [toast]);
+
+    const handleApproval = async (id: string, newStatus: 'approved' | 'declined') => {
+        const studentRef = doc(db, 'users', id);
+        try {
+            await updateDoc(studentRef, { status: newStatus });
+            toast({
+                title: `User ${newStatus}`,
+                description: `The student account has been successfully ${newStatus}.`,
+            });
+        } catch (error) {
+            console.error("Error updating status: ", error);
+            toast({ title: "Error", description: "Failed to update user status.", variant: "destructive" });
+        }
     };
 
     return (
@@ -63,6 +95,13 @@ export default function ApproveUsersPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
+                    {loading ? (
+                        <div className="space-y-4">
+                            <Skeleton className="h-12 w-full" />
+                            <Skeleton className="h-12 w-full" />
+                            <Skeleton className="h-12 w-full" />
+                        </div>
+                    ) : (
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -103,6 +142,7 @@ export default function ApproveUsersPage() {
                             ))}
                         </TableBody>
                     </Table>
+                    )}
                 </CardContent>
             </Card>
         </div>

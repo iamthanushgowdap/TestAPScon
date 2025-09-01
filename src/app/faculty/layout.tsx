@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { BotMessageSquare, LayoutDashboard, Users, Upload, ClipboardCheck, Megaphone, GraduationCap, Bell, User as UserIcon } from 'lucide-react';
+import { BotMessageSquare, LayoutDashboard, Users, Upload, ClipboardCheck, Megaphone, GraduationCap, Bell, User as UserIcon, LogOut } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -26,6 +26,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from 'react';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 const navItems = [
   { href: '/faculty/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -38,6 +44,38 @@ const navItems = [
 
 export default function FacultyLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        if (!currentUser) {
+            router.push('/login');
+        } else {
+            setUser(currentUser)
+        }
+    });
+    return () => unsubscribe();
+  }, [router]);
+
+  const handleLogout = async () => {
+    try {
+        await signOut(auth);
+        toast({
+            title: 'Logged Out',
+            description: 'You have been successfully logged out.',
+        });
+        router.push('/login');
+    } catch (error) {
+        toast({
+            title: 'Logout Failed',
+            description: 'There was an error logging you out.',
+            variant: 'destructive',
+        });
+    }
+  };
+
 
   return (
     <SidebarProvider>
@@ -80,8 +118,8 @@ export default function FacultyLayout({ children }: { children: ReactNode }) {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Avatar className="h-9 w-9 cursor-pointer">
-                        <AvatarImage src="https://picsum.photos/100/100" alt="User" data-ai-hint="person avatar" />
-                        <AvatarFallback>F</AvatarFallback>
+                        <AvatarImage src={user?.photoURL || "https://picsum.photos/100/100"} alt="User" data-ai-hint="person avatar" />
+                        <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'F'}</AvatarFallback>
                     </Avatar>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -98,7 +136,10 @@ export default function FacultyLayout({ children }: { children: ReactNode }) {
                       <span>Cera.AI Settings</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                     <DropdownMenuItem>Logout</DropdownMenuItem>
+                     <DropdownMenuItem onClick={handleLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Logout</span>
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
             </div>
@@ -110,4 +151,3 @@ export default function FacultyLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
-

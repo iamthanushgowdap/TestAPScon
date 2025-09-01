@@ -11,22 +11,66 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 
 export default function RegisterPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [usnYear, setUsnYear] = useState('');
   const [usnBranch, setUsnBranch] = useState('');
   const [usnRoll, setUsnRoll] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Form validation can be added here
-    toast({
-      title: 'Registration Successful!',
-      description: 'Your account has been created. Please wait for admin approval to log in.',
-    });
-    router.push('/login');
+    if (password !== confirmPassword) {
+        toast({
+            title: 'Error',
+            description: 'Passwords do not match.',
+            variant: 'destructive',
+        });
+        return;
+    }
+    setLoading(true);
+
+    const usn = `1AP${usnYear}${usnBranch}${usnRoll}`;
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      await setDoc(doc(db, 'users', user.uid), {
+        email: user.email,
+        usn: usn,
+        role: 'student',
+        status: 'pending',
+        branch: usnBranch,
+        year: `20${usnYear}`,
+        createdAt: new Date(),
+      });
+
+      toast({
+        title: 'Registration Successful!',
+        description: 'Your account has been created. Please wait for admin approval to log in.',
+      });
+      router.push('/login');
+    } catch (error: any) {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        toast({
+            title: 'Registration Failed',
+            description: errorMessage,
+            variant: 'destructive',
+        });
+        console.error(`${errorCode}: ${errorMessage}`);
+    } finally {
+        setLoading(false);
+    }
   };
 
   return (
@@ -49,7 +93,7 @@ export default function RegisterPage() {
             <form onSubmit={handleRegister} className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="you@example.com" required />
+                    <Input id="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label>USN (University Seat Number)</Label>
@@ -89,15 +133,15 @@ export default function RegisterPage() {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" placeholder="••••••••" required />
+                    <Input id="password" type="password" placeholder="••••••••" required value={password} onChange={(e) => setPassword(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="confirm-password">Confirm Password</Label>
-                    <Input id="confirm-password" type="password" placeholder="••••••••" required />
+                    <Input id="confirm-password" type="password" placeholder="••••••••" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                 </div>
 
-                <Button type="submit" className="w-full mt-4">
-                    Register
+                <Button type="submit" className="w-full mt-4" disabled={loading}>
+                    {loading ? 'Registering...' : 'Register'}
                     <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
 
