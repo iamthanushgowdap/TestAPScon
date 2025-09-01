@@ -91,7 +91,7 @@ export default function FacultyLayout({ children }: { children: ReactNode }) {
         <SidebarContent>
           <SidebarMenu>
             {navItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
+              <SidebarMenuItem key={item.label}>
                 <SidebarMenuButton
                   asChild
                   isActive={pathname === item.href}
