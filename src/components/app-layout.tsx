@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { BotMessageSquare, BookCopy, LayoutDashboard, ListTodo, GraduationCap, Bell } from 'lucide-react';
+import { BotMessageSquare, BookCopy, LayoutDashboard, ListTodo, GraduationCap, Bell, CalendarClock } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/schedule', label: 'Schedule', icon: CalendarClock },
   { href: '/tasks', label: 'Tasks', icon: ListTodo },
   { href: '/resources', label: 'Resources', icon: BookCopy },
   { href: '/chat', label: 'Cera.AI', icon: BotMessageSquare },
