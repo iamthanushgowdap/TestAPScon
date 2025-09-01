@@ -33,56 +33,54 @@ interface LoginFormProps {
   role: Role;
 }
 
-const studentSchema = z.object({
-  usn: z.string().min(1, 'USN is required').regex(/^1AP\d{2}[A-Z]{2,3}\d{3}$/, 'Invalid USN format'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
-
-const facultyAdminSchema = z.object({
+const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
+
 
 export function LoginForm({ role }: LoginFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const isStudent = role.name === 'Student';
-  const schema = isStudent ? studentSchema : facultyAdminSchema;
-
-  const form = useForm<z.infer<typeof schema>>({
-    resolver: zodResolver(schema),
-    defaultValues: isStudent ? { usn: '', password: '' } : { email: '', password: '' },
+  
+  const form = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
   });
 
-  async function onSubmit(values: z.infer<typeof schema>) {
+  async function onSubmit(values: z.infer<typeof loginSchema>) {
     setLoading(true);
     try {
       let userCredential;
       let userDoc;
 
       if (isStudent) {
-        const studentValues = values as z.infer<typeof studentSchema>;
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, where("usn", "==", studentValues.usn.toUpperCase()));
+        const q = query(usersRef, where("email", "==", values.email.toLowerCase()));
         const querySnapshot = await getDocs(q);
         
         if (querySnapshot.empty) {
-          throw new Error("No account found with this USN.");
+          throw new Error("No account found with this email.");
         }
         const userDocSnap = querySnapshot.docs[0];
         const userData = userDocSnap.data();
         
-        userCredential = await signInWithEmailAndPassword(auth, userData.email, studentValues.password);
+        if (userData.role !== 'student') {
+            throw new Error(`This email is not registered as a student account.`);
+        }
+
+        userCredential = await signInWithEmailAndPassword(auth, userData.email, values.password);
         userDoc = { id: userDocSnap.id, ...userData };
       } else {
-        const nonStudentValues = values as z.infer<typeof facultyAdminSchema>;
+        // Logic for Faculty and Admin
         try {
-            userCredential = await signInWithEmailAndPassword(auth, nonStudentValues.email, nonStudentValues.password);
+            userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
         } catch (error: any) {
             // If the user doesn't exist and it's the admin email, create the account.
-            if (error.code === 'auth/user-not-found' && nonStudentValues.email === 'admin@gmail.com') {
-                userCredential = await createUserWithEmailAndPassword(auth, nonStudentValues.email, nonStudentValues.password);
+            if (error.code === 'auth/user-not-found' && values.email === 'admin@gmail.com') {
+                userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             } else {
                 throw error; // Re-throw other errors
             }
@@ -94,7 +92,7 @@ export function LoginForm({ role }: LoginFormProps) {
         if (!userDocSnap.exists()) {
              // Create a user doc if it doesn't exist (for pre-seeded admins/faculty)
              const userData = {
-                email: nonStudentValues.email,
+                email: values.email,
                 role: role.name.toLowerCase(),
                 status: 'approved',
                 createdAt: new Date(),
@@ -136,35 +134,19 @@ export function LoginForm({ role }: LoginFormProps) {
        </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          {isStudent ? (
-            <FormField
-              control={form.control}
-              name="usn"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>USN (e.g., 1AP23CS001)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your full USN" {...field} onChange={e => field.onChange(e.target.value.toUpperCase())} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          ) : (
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="you@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input placeholder="you@example.com" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             control={form.control}
             name="password"
