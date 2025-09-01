@@ -1,3 +1,5 @@
+'use client';
+
 import AppLayout from '@/components/app-layout';
 import ChatInterface from '@/components/chat-interface';
 
