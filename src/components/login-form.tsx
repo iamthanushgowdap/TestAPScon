@@ -18,8 +18,8 @@ import { ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useState } from 'react';
 
@@ -76,20 +76,31 @@ export function LoginForm({ role }: LoginFormProps) {
         userCredential = await signInWithEmailAndPassword(auth, userData.email, studentValues.password);
         userDoc = { id: userDocSnap.id, ...userData };
       } else {
-        const adminValues = values as z.infer<typeof facultyAdminSchema>;
-        userCredential = await signInWithEmailAndPassword(auth, adminValues.email, adminValues.password);
+        const nonStudentValues = values as z.infer<typeof facultyAdminSchema>;
+        try {
+            userCredential = await signInWithEmailAndPassword(auth, nonStudentValues.email, nonStudentValues.password);
+        } catch (error: any) {
+            // If the user doesn't exist and it's the admin email, create the account.
+            if (error.code === 'auth/user-not-found' && nonStudentValues.email === 'admin@gmail.com') {
+                userCredential = await createUserWithEmailAndPassword(auth, nonStudentValues.email, nonStudentValues.password);
+            } else {
+                throw error; // Re-throw other errors
+            }
+        }
+        
         const userDocRef = doc(db, "users", userCredential.user.uid);
         const userDocSnap = await getDoc(userDocRef);
+
         if (!userDocSnap.exists()) {
              // Create a user doc if it doesn't exist (for pre-seeded admins/faculty)
-             const adminData = {
-                email: adminValues.email,
+             const userData = {
+                email: nonStudentValues.email,
                 role: role.name.toLowerCase(),
                 status: 'approved',
                 createdAt: new Date(),
             };
-            await setDoc(userDocRef, adminData);
-            userDoc = { id: userDocRef.id, ...adminData };
+            await setDoc(userDocRef, userData);
+            userDoc = { id: userDocRef.id, ...userData };
         } else {
             userDoc = { id: userDocSnap.id, ...userDocSnap.data() };
         }
