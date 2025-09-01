@@ -39,6 +39,8 @@ export default function AdminDashboardPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // These queries are likely to fail if Firestore rules don't allow listing users.
+        // The error is handled gracefully by the onSnapshot error callback.
         const usersRef = collection(db, 'users');
 
         const studentQuery = query(usersRef, where('role', '==', 'student'));
@@ -47,10 +49,18 @@ export default function AdminDashboardPage() {
         const studentUnsubscribe = onSnapshot(studentQuery, (snapshot) => {
             setStudentCount(snapshot.size);
             setLoading(false);
+        }, (error) => {
+            console.error("Firestore error (students):", error.message);
+            setStudentCount(0); // Set to 0 on error to avoid stale data
+            setLoading(false);
         });
 
         const facultyUnsubscribe = onSnapshot(facultyQuery, (snapshot) => {
             setFacultyCount(snapshot.size);
+            setLoading(false);
+        }, (error) => {
+            console.error("Firestore error (faculty):", error.message);
+            setFacultyCount(0); // Set to 0 on error
             setLoading(false);
         });
 
@@ -94,6 +104,9 @@ export default function AdminDashboardPage() {
                             ) : (
                                 <div className="text-2xl font-bold">{stat.value}</div>
                             )}
+                            {(stat.title === "Total Students" || stat.title === "Total Faculty") && studentCount === 0 && !loading &&
+                                <p className="text-xs text-muted-foreground">Permission error?</p>
+                            }
                         </CardContent>
                     </Card>
                 ))}

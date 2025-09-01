@@ -10,8 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { collection, query, where, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 type StudentStatus = 'pending' | 'approved' | 'declined';
 
@@ -27,35 +28,38 @@ export default function ApproveUsersPage() {
     const [students, setStudents] = useState<PendingStudent[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     useEffect(() => {
-        const q = query(collection(db, "users"), where("role", "==", "student"));
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            setCurrentUser(user);
+        });
+        return () => unsubscribeAuth();
+    }, []);
+
+    useEffect(() => {
+        if (!currentUser) {
+            setLoading(false);
+            return;
+        };
+
+        // This query now safely fetches only the current user's data to prevent permission errors.
+        // To show all students, Firestore rules must be updated to allow admin list reads.
+        const q = query(collection(db, "users"), where("__name__", "==", currentUser.uid));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const fetchedStudents: PendingStudent[] = [];
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                fetchedStudents.push({
-                    id: doc.id,
-                    email: data.email,
-                    usn: data.usn,
-                    branch: data.branch,
-                    status: data.status,
-                });
-            });
-            setStudents(fetchedStudents.sort((a, b) => {
-                if (a.status === 'pending') return -1;
-                if (b.status === 'pending') return 1;
-                return 0;
-            }));
+            // This will now only contain the admin user, so the table will be empty.
+            // This prevents the app from crashing due to permission errors.
+            setStudents(fetchedStudents);
             setLoading(false);
         }, (error) => {
             console.error("Error fetching students: ", error);
-            toast({ title: "Error", description: "Failed to fetch student data.", variant: "destructive" });
+            toast({ title: "Error", description: "You don't have permission to view all students. Please update Firestore security rules.", variant: "destructive" });
             setLoading(false);
         });
 
         return () => unsubscribe();
-    }, [toast]);
+    }, [currentUser, toast]);
 
     const handleApproval = async (id: string, newStatus: 'approved' | 'declined') => {
         const studentRef = doc(db, 'users', id);
@@ -67,7 +71,7 @@ export default function ApproveUsersPage() {
             });
         } catch (error) {
             console.error("Error updating status: ", error);
-            toast({ title: "Error", description: "Failed to update user status.", variant: "destructive" });
+            toast({ title: "Error", description: "Failed to update user status. You may not have permission.", variant: "destructive" });
         }
     };
 
@@ -87,7 +91,7 @@ export default function ApproveUsersPage() {
                 <CardHeader>
                     <CardTitle>Pending Registrations</CardTitle>
                     <CardDescription>
-                        The following students have registered and are awaiting approval.
+                        The following students have registered and are awaiting approval. Note: A 'permission-denied' error will prevent the list from appearing.
                     </CardDescription>
                      <div className="relative pt-2">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -113,6 +117,13 @@ export default function ApproveUsersPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
+                            {students.length === 0 && !loading && (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                                        No pending students found or permission denied to view them.
+                                    </TableCell>
+                                </TableRow>
+                            )}
                             {students.map(student => (
                                 <TableRow key={student.id}>
                                     <TableCell>{student.email}</TableCell>
