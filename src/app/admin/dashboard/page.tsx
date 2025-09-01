@@ -3,8 +3,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Briefcase, Percent, Wallet, BarChart, PieChart as PieChartIcon, Shield, Database, Megaphone, Bot, ArrowRight, Bell } from "lucide-react";
-import { Bar, Pie, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, PieChart } from "recharts";
+import { Users, Briefcase, Percent, Wallet, BarChart, Shield, Database, Megaphone, Bot, ArrowRight } from "lucide-react";
+import { Bar, Pie, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, PieChart, Cell } from "recharts";
 
 
 const quickStats = [
@@ -148,7 +148,7 @@ export default function AdminDashboardPage() {
                         Let Cera.AI help you with administrative tasks.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-wrap gap-2">
+                <CardContent className="flex flex-col sm:flex-row flex-wrap gap-2">
                     <Button variant="outline" size="sm">"Generate monthly attendance report"</Button>
                     <Button variant="outline" size="sm">"List all students with pending fees"</Button>
                     <Button variant="outline" size="sm">"What is the faculty to student ratio?"</Button>

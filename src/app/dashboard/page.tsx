@@ -4,7 +4,7 @@ import AppLayout from "@/components/app-layout";
 import { ProactiveReminderCard } from "@/components/proactive-reminder-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Bot, BookCopy, ListTodo, Calendar, Clock, FileText, Wallet, Percent, Bell, PartyPopper } from "lucide-react";
+import { ArrowRight, Bot, BookCopy, ListTodo, Calendar, Clock, FileText, Wallet, Percent, PartyPopper } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
@@ -28,10 +28,10 @@ export default function DashboardPage() {
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground">
+                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-headline text-foreground">
                             Hi Tanushree 👋, Welcome Back!
                         </h1>
-                        <p className="text-muted-foreground mt-1">
+                        <p className="text-muted-foreground mt-1 text-sm sm:text-base">
                             Here’s your personalized dashboard for the day.
                         </p>
                     </div>
@@ -174,10 +174,10 @@ export default function DashboardPage() {
                 <ProactiveReminderCard />
 
                  {/* Floating Action Button for Cera.AI */}
-                <div className="fixed bottom-8 right-8 z-50">
-                    <Button asChild size="icon" className="h-16 w-16 rounded-full shadow-lg bg-primary hover:bg-primary/90 transition-transform hover:scale-110">
+                <div className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50">
+                    <Button asChild size="icon" className="h-14 w-14 md:h-16 md:w-16 rounded-full shadow-lg bg-primary hover:bg-primary/90 transition-transform hover:scale-110">
                         <Link href="/chat">
-                            <Bot className="h-8 w-8" />
+                            <Bot className="h-7 w-7 md:h-8 md:w-8" />
                             <span className="sr-only">Chat with Cera.AI</span>
                         </Link>
                     </Button>

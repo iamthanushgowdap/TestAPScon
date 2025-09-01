@@ -10,7 +10,7 @@ export default function Home() {
   useEffect(() => {
     const timer = setTimeout(() => {
       router.replace('/login');
-    }, 3500); // Display splash screen for 3.5 seconds
+    }, 2500); // Display splash screen for 2.5 seconds
 
     return () => clearTimeout(timer);
   }, [router]);

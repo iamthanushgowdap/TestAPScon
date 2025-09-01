@@ -1,4 +1,5 @@
 
+
 import AppLayout from "@/components/app-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,7 @@ export default function FacultyDashboardPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground">
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-headline text-foreground">
                         Welcome Faculty – Manage Smarter
                     </h1>
                     <p className="text-muted-foreground mt-1">
@@ -96,7 +97,7 @@ export default function FacultyDashboardPage() {
                         Let Cera.AI help you with common tasks.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-wrap gap-2">
+                <CardContent className="flex flex-col sm:flex-row flex-wrap gap-2">
                     <Button variant="outline" size="sm">"Show me today's absent students"</Button>
                     <Button variant="outline" size="sm">"List students with low attendance"</Button>
                     <Button variant="outline" size="sm">"Create a new assignment for Physics 101"</Button>
@@ -104,10 +105,10 @@ export default function FacultyDashboardPage() {
             </Card>
 
              {/* Floating Action Button for Cera.AI */}
-            <div className="fixed bottom-8 right-8 z-50">
-                <Button asChild size="icon" className="h-16 w-16 rounded-full shadow-lg bg-primary hover:bg-primary/90 transition-transform hover:scale-110">
+            <div className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50">
+                <Button asChild size="icon" className="h-14 w-14 md:h-16 md:w-16 rounded-full shadow-lg bg-primary hover:bg-primary/90 transition-transform hover:scale-110">
                     <Link href="/chat">
-                        <Bot className="h-8 w-8" />
+                        <Bot className="h-7 w-7 md:h-8 md:w-8" />
                         <span className="sr-only">Chat with Cera.AI</span>
                     </Link>
                 </Button>
@@ -115,4 +116,3 @@ export default function FacultyDashboardPage() {
         </div>
     );
 }
-

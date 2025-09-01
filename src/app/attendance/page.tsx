@@ -4,8 +4,8 @@
 import AppLayout from "@/components/app-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bot, Book, Calculator, FlaskConical, AlertTriangle, Bell, PieChart as PieChartIcon, Percent } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { Bot, Book, Calculator, FlaskConical, AlertTriangle, Bell, Percent } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -83,9 +83,9 @@ export default function AttendancePage() {
           {/* Right Column: Subject-wise Breakdown */}
           <div className="lg:col-span-2">
             <Tabs defaultValue="semester">
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                     <h2 className="text-xl font-semibold">Subject-wise Breakdown</h2>
-                    <TabsList>
+                    <TabsList className="grid w-full sm:w-auto grid-cols-3">
                         <TabsTrigger value="week">Week</TabsTrigger>
                         <TabsTrigger value="month">Month</TabsTrigger>
                         <TabsTrigger value="semester">Semester</TabsTrigger>
@@ -101,7 +101,7 @@ export default function AttendancePage() {
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                            <div className="flex items-center gap-3">
                                 <subject.icon className={cn("h-6 w-6", subject.color)} />
-                                <CardTitle className="text-lg">{subject.name}</CardTitle>
+                                <CardTitle className="text-base font-semibold">{subject.name}</CardTitle>
                            </div>
                            {subject.attendance < 75 && <AlertTriangle className="h-5 w-5 text-red-400" />}
                         </CardHeader>
