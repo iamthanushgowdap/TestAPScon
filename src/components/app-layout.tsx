@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { BotMessageSquare, BookCopy, LayoutDashboard, ListTodo, GraduationCap } from 'lucide-react';
+import { BotMessageSquare, BookCopy, LayoutDashboard, ListTodo, GraduationCap, Bell } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -15,6 +15,8 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -41,18 +43,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <SidebarMenu>
             {navItems.map((item) => (
               <SidebarMenuItem key={item.href}>
-                <Link href={item.href} passHref>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.href}
-                    tooltip={item.label}
-                  >
-                    <div>
-                        <item.icon />
-                        <span>{item.label}</span>
-                    </div>
-                  </SidebarMenuButton>
-                </Link>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === item.href}
+                  tooltip={item.label}
+                >
+                  <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
@@ -61,7 +61,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <SidebarInset>
         <header className="flex items-center justify-between p-4 border-b md:justify-end">
             <SidebarTrigger className="md:hidden" />
-            {/* Can add user profile / settings button here */}
+            <div className='flex items-center gap-4'>
+                <Button variant="ghost" size="icon">
+                    <Bell className="h-5 w-5" />
+                    <span className='sr-only'>Notifications</span>
+                </Button>
+                <Avatar className="h-9 w-9">
+                    <AvatarImage src="https://picsum.photos/100/100" alt="User" data-ai-hint="person avatar" />
+                    <AvatarFallback>T</AvatarFallback>
+                </Avatar>
+            </div>
         </header>
         <main className="flex-1 overflow-y-auto">
             {children}
