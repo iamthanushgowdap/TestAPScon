@@ -39,14 +39,16 @@ export default function RegisterPage() {
     setLoading(true);
 
     const usn = `1AP${usnYear}${usnBranch}${usnRoll}`;
-    const userEmail = email.toLowerCase(); // Convert email to lowercase
+    const userEmail = email.toLowerCase();
 
     try {
+      // Step 1: Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, userEmail, password);
       const user = userCredential.user;
 
+      // Step 2: Create a corresponding user document in Firestore with the user's UID as the document ID
       await setDoc(doc(db, 'users', user.uid), {
-        email: user.email, // Use the email from the created user which is already lowercase
+        email: user.email, // Store for reference, though UID is the primary link
         usn: usn,
         role: 'student',
         status: 'pending',
@@ -62,7 +64,10 @@ export default function RegisterPage() {
       router.push('/login');
     } catch (error: any) {
         const errorCode = error.code;
-        const errorMessage = error.message;
+        let errorMessage = error.message;
+        if (errorCode === 'auth/email-already-in-use') {
+            errorMessage = 'This email address is already registered. Please login instead.';
+        }
         toast({
             title: 'Registration Failed',
             description: errorMessage,

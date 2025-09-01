@@ -19,7 +19,7 @@ import { useRouter } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useState } from 'react';
 
@@ -43,7 +43,6 @@ export function LoginForm({ role }: LoginFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const isStudent = role.name === 'Student';
   
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -52,60 +51,39 @@ export function LoginForm({ role }: LoginFormProps) {
 
   async function onSubmit(values: z.infer<typeof loginSchema>) {
     setLoading(true);
+    const userEmail = values.email.toLowerCase();
+    const userPassword = values.password;
+
     try {
-      let userCredential;
-      let userDoc;
-      const userEmail = values.email.toLowerCase(); // Convert to lowercase
-      const userPassword = values.password;
+      // Step 1: Authenticate with Firebase Auth first for all roles.
+      const userCredential = await signInWithEmailAndPassword(auth, userEmail, userPassword);
+      const user = userCredential.user;
 
-      if (isStudent) {
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where("email", "==", userEmail));
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-          throw new Error("No account found with this email.");
-        }
-        const userDocSnap = querySnapshot.docs[0];
-        const userData = userDocSnap.data();
-        
-        if (userData.role !== 'student') {
-            throw new Error(`This email is not registered as a student account.`);
-        }
+      // Step 2: Fetch the user's document from Firestore using their UID.
+      const userDocRef = doc(db, "users", user.uid);
+      const userDocSnap = await getDoc(userDocRef);
 
-        userCredential = await signInWithEmailAndPassword(auth, userEmail, userPassword);
-        userDoc = { id: userDocSnap.id, ...userData };
-      } else {
-        // Logic for Faculty and Admin
-        try {
-            userCredential = await signInWithEmailAndPassword(auth, userEmail, userPassword);
-        } catch (error: any) {
-            // If the user doesn't exist and it's the admin email, create the account.
-            if (error.code === 'auth/user-not-found' && userEmail === 'admin@gmail.com') {
-                userCredential = await createUserWithEmailAndPassword(auth, userEmail, userPassword);
-            } else {
-                throw error; // Re-throw other errors
-            }
-        }
-        
-        const userDocRef = doc(db, "users", userCredential.user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-
-        if (!userDocSnap.exists()) {
-             // Create a user doc if it doesn't exist (for pre-seeded admins/faculty)
-             const userData = {
-                email: userEmail,
+      // Handle cases for pre-seeded admins/faculty who might not have a doc yet.
+      if (!userDocSnap.exists()) {
+        if (role.name === 'Admin' || role.name === 'Faculty') {
+            const userData = {
+                email: user.email, // Store email for reference, but UID is primary key
                 role: role.name.toLowerCase(),
                 status: 'approved',
                 createdAt: new Date(),
             };
             await setDoc(userDocRef, userData);
-            userDoc = { id: userDocRef.id, ...userData };
+            router.push(role.href);
+            return;
         } else {
-            userDoc = { id: userDocSnap.id, ...userDocSnap.data() };
+            // A student should always have a document created at registration.
+            throw new Error("Your user profile does not exist. Please contact support.");
         }
       }
 
+      const userDoc = userDocSnap.data();
+
+      // Step 3: Verify role and status.
       if (userDoc.role !== role.name.toLowerCase()) {
         throw new Error(`You are not authorized to log in as ${role.name}.`);
       }
@@ -114,11 +92,20 @@ export function LoginForm({ role }: LoginFormProps) {
           throw new Error("Your account is pending approval from an administrator.");
       }
 
+      // Step 4: Redirect on success.
       router.push(role.href);
+
     } catch (error: any) {
+      let errorMessage = "Invalid credentials or account issue.";
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
+        errorMessage = "Invalid email or password. Please try again.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: "Login Failed",
-        description: error.message || "Invalid credentials or account issue.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
