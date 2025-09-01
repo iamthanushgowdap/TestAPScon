@@ -3,8 +3,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Briefcase, Percent, Wallet, BarChart, Shield, Database, Megaphone, Bot, ArrowRight } from "lucide-react";
-import { Bar, Pie, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, PieChart, Cell } from "recharts";
+import { Users, Briefcase, Percent, Wallet, Shield, Database, Megaphone, Bot, ArrowRight } from "lucide-react";
+import { Bar, Pie, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, PieChart, Cell, BarChart } from "recharts";
 
 
 const quickStats = [
