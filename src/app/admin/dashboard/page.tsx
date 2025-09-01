@@ -1,18 +1,14 @@
 
 'use client'
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Briefcase, Percent, Wallet, Shield, Database, Megaphone, Bot, ArrowRight } from "lucide-react";
 import { Bar, Pie, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, PieChart, Cell, BarChart } from "recharts";
-
-
-const quickStats = [
-    { title: "Total Students", value: "1,250", icon: Users, color: "text-blue-400" },
-    { title: "Total Faculty", value: "85", icon: Briefcase, color: "text-purple-400" },
-    { title: "Avg. Attendance", value: "92%", icon: Percent, color: "text-green-400" },
-    { title: "Fees Collected", value: "$1.2M", icon: Wallet, color: "text-yellow-400" },
-];
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const attendanceData = [
     { name: 'Jan', attendance: 88 },
@@ -38,6 +34,40 @@ const adminActions = [
 
 
 export default function AdminDashboardPage() {
+    const [studentCount, setStudentCount] = useState(0);
+    const [facultyCount, setFacultyCount] = useState(0);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const usersRef = collection(db, 'users');
+
+        const studentQuery = query(usersRef, where('role', '==', 'student'));
+        const facultyQuery = query(usersRef, where('role', '==', 'faculty'));
+
+        const studentUnsubscribe = onSnapshot(studentQuery, (snapshot) => {
+            setStudentCount(snapshot.size);
+            setLoading(false);
+        });
+
+        const facultyUnsubscribe = onSnapshot(facultyQuery, (snapshot) => {
+            setFacultyCount(snapshot.size);
+            setLoading(false);
+        });
+
+        return () => {
+            studentUnsubscribe();
+            facultyUnsubscribe();
+        };
+    }, []);
+    
+    const quickStats = [
+        { title: "Total Students", value: studentCount.toString(), icon: Users, color: "text-blue-400" },
+        { title: "Total Faculty", value: facultyCount.toString(), icon: Briefcase, color: "text-purple-400" },
+        { title: "Avg. Attendance", value: "92%", icon: Percent, color: "text-green-400" },
+        { title: "Fees Collected", value: "$1.2M", icon: Wallet, color: "text-yellow-400" },
+    ];
+
+
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
             {/* Header */}
@@ -59,7 +89,11 @@ export default function AdminDashboardPage() {
                             <stat.icon className={`h-5 w-5 ${stat.color}`} />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{stat.value}</div>
+                            {loading ? (
+                                <Skeleton className="h-8 w-1/2" />
+                            ) : (
+                                <div className="text-2xl font-bold">{stat.value}</div>
+                            )}
                         </CardContent>
                     </Card>
                 ))}
