@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { BotMessageSquare, BookCopy, LayoutDashboard, ListTodo, GraduationCap, Bell, CalendarClock, PieChart } from 'lucide-react';
+import { BotMessageSquare, LayoutDashboard, Users, Shield, Database, Megaphone, GraduationCap, Bell, BarChart, FileText } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -17,34 +17,27 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { usePathname as useCurrentPath } from 'next/navigation'
-
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/schedule', label: 'Schedule', icon: CalendarClock },
-  { href: '/attendance', label: 'Attendance', icon: PieChart },
-  { href: '/tasks', label: 'Tasks', icon: ListTodo },
-  { href: '/resources', label: 'Resources', icon: BookCopy },
+  { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '#', label: 'User Management', icon: Users },
+  { href: '#', label: 'Security', icon: Shield },
+  { href: '#', label: 'Database', icon: Database },
+  { href: '#', label: 'Analytics', icon: BarChart },
+  { href: '#', label: 'Reports', icon: FileText },
+  { href: '#', label: 'Announcements', icon: Megaphone },
   { href: '/chat', label: 'Cera.AI', icon: BotMessageSquare },
 ];
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const currentPath = useCurrentPath();
-  const isAdmin = currentPath.includes('/admin');
-  const isFaculty = currentPath.includes('/faculty');
-
-  if (isFaculty || isAdmin) {
-    return <>{children}</>
-  }
 
   return (
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader className="p-4">
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href="/admin/dashboard" className="flex items-center gap-2">
             <GraduationCap className="w-8 h-8 text-primary" />
             <span className="font-headline text-2xl font-bold text-foreground">
               APSConnect
@@ -80,11 +73,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 </Button>
                 <Avatar className="h-9 w-9">
                     <AvatarImage src="https://picsum.photos/100/100" alt="User" data-ai-hint="person avatar" />
-                    <AvatarFallback>T</AvatarFallback>
+                    <AvatarFallback>A</AvatarFallback>
                 </Avatar>
             </div>
         </header>
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto bg-background">
             {children}
         </main>
         </SidebarInset>

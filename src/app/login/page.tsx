@@ -28,7 +28,7 @@ import { motion } from 'framer-motion';
 const roles = [
   { name: 'Student', icon: GraduationCap, href: '/dashboard' },
   { name: 'Faculty', icon: Briefcase, href: '/faculty/dashboard' },
-  { name: 'Admin', icon: Shield, href: '/dashboard' },
+  { name: 'Admin', icon: Shield, href: '/admin/dashboard' },
 ];
 
 const features = [
