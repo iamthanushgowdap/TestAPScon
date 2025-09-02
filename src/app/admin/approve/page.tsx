@@ -45,16 +45,19 @@ export default function ApproveUsersPage() {
 
         // This query now safely fetches only the current user's data to prevent permission errors.
         // To show all students, Firestore rules must be updated to allow admin list reads.
-        const q = query(collection(db, "users"), where("__name__", "==", currentUser.uid));
+        const q = query(collection(db, "users"), where("status", "==", "pending"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const fetchedStudents: PendingStudent[] = [];
-            // This will now only contain the admin user, so the table will be empty.
-            // This prevents the app from crashing due to permission errors.
+             querySnapshot.forEach((doc) => {
+                fetchedStudents.push({ id: doc.id, ...doc.data() } as PendingStudent);
+            });
             setStudents(fetchedStudents);
             setLoading(false);
         }, (error) => {
             console.error("Error fetching students: ", error);
-            toast({ title: "Error", description: "You don't have permission to view all students. Please update Firestore security rules.", variant: "destructive" });
+            toast({ title: "Error", description: "You may not have permission to view all students. Please update Firestore security rules.", variant: "destructive" });
+            // Set students to an empty array to clear the list on error and prevent crashes.
+            setStudents([]);
             setLoading(false);
         });
 

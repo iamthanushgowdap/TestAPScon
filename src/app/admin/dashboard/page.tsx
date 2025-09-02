@@ -104,8 +104,8 @@ export default function AdminDashboardPage() {
                             ) : (
                                 <div className="text-2xl font-bold">{stat.value}</div>
                             )}
-                            {(stat.title === "Total Students" || stat.title === "Total Faculty") && studentCount === 0 && !loading &&
-                                <p className="text-xs text-muted-foreground">Permission error?</p>
+                            {(stat.title === "Total Students" || stat.title === "Total Faculty") && !loading &&
+                                <p className="text-xs text-muted-foreground">Update rules to see counts</p>
                             }
                         </CardContent>
                     </Card>
