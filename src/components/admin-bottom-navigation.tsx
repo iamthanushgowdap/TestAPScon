@@ -8,9 +8,9 @@ import { cn } from '@/lib/utils';
 const navLinks = [
     { href: '/admin/dashboard', iconId: '#home-icon' },
     { href: '/admin/approve', iconId: '#bookmark-icon' },
-    { href: '/admin/dashboard', iconId: '#plus-icon' }, // Assuming plus is a placeholder
+    { href: '/admin/faculty-management', iconId: '#plus-icon' },
     { href: '/profile?role=admin', iconId: '#user-icon' },
-    { href: '#', iconId: '#settings-icon' } // Assuming settings is a placeholder
+    { href: '/admin/user-management', iconId: '#settings-icon' }
 ];
 
 export default function AdminBottomNavigation() {
