@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Users, Briefcase, Percent, Wallet, Shield, Database, Megaphone, Bot, ArrowRight } from "lucide-react";
 import { Bar, Pie, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, PieChart, Cell, BarChart } from "recharts";
 import { collection, query, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 const attendanceData = [
     { name: 'Jan', attendance: 88 },
@@ -40,8 +41,26 @@ export default function AdminDashboardPage() {
     const [loading, setLoading] = useState(true);
     const [permissionError, setPermissionError] = useState(false);
     const { toast } = useToast();
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+     useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                setCurrentUser(user);
+            } else {
+                setCurrentUser(null);
+                setLoading(false);
+            }
+        });
+        return () => unsubscribeAuth();
+    }, []);
 
     useEffect(() => {
+        if (!currentUser) {
+            setLoading(false);
+            return;
+        }
+
         const usersQuery = query(collection(db, 'users'));
 
         const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
@@ -77,7 +96,7 @@ export default function AdminDashboardPage() {
         });
 
         return () => unsubscribe();
-    }, [toast, permissionError]);
+    }, [currentUser, toast, permissionError]);
     
     const quickStats = [
         { title: "Total Students", value: studentCount.toString(), icon: Users, color: "text-blue-400" },
