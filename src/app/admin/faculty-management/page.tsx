@@ -346,6 +346,7 @@ export default function FacultyManagementPage() {
                                 <Input 
                                     id="password" 
                                     type="password"
+                                    placeholder="Initial password for login"
                                     value={currentFaculty.password || ''} 
                                     onChange={(e) => setCurrentFaculty({...currentFaculty, password: e.target.value })}
                                     className="col-span-3"
@@ -402,10 +403,11 @@ export default function FacultyManagementPage() {
                                                 onSelect={(currentValue) => {
                                                     const selectedBranches = currentFaculty.branch || [];
                                                     const isSelected = selectedBranches.includes(branch.name);
-                                                    const newBranches = isSelected
-                                                        ? selectedBranches.filter(b => b !== branch.name)
-                                                        : [...selectedBranches, branch.name];
-                                                    setCurrentFaculty({ ...currentFaculty, branch: newBranches });
+                                                    if (isSelected) {
+                                                        setCurrentFaculty({ ...currentFaculty, branch: selectedBranches.filter(b => b !== branch.name) });
+                                                    } else {
+                                                        setCurrentFaculty({ ...currentFaculty, branch: [...selectedBranches, branch.name] });
+                                                    }
                                                 }}
                                             >
                                             <div
