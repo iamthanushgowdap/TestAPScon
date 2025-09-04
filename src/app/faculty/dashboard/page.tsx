@@ -1,4 +1,5 @@
 
+'use client';
 
 import AppLayout from "@/components/app-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -6,6 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, Bot, Users, Upload, ClipboardCheck, Megaphone, Search } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { onAuthStateChanged, User } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 const features = [
     {
@@ -36,17 +43,61 @@ const features = [
 
 
 export default function FacultyDashboardPage() {
+    const [user, setUser] = useState<User | null>(null);
+    const [userData, setUserData] = useState<{ name: string; branch: string[] } | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                    const data = userDocSnap.data();
+                    setUserData({
+                        name: data.name || currentUser.displayName || 'Faculty',
+                        branch: data.branch || [],
+                    });
+                } else {
+                     setUserData({
+                        name: currentUser.displayName || 'Faculty',
+                        branch: [],
+                    });
+                }
+            } else {
+                setUser(null);
+                setUserData(null);
+            }
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8 relative">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-headline text-foreground">
-                        Welcome Faculty – Manage Smarter
-                    </h1>
-                    <p className="text-muted-foreground mt-1">
-                        Your centralized hub for course management.
-                    </p>
+                     {loading ? (
+                        <>
+                            <Skeleton className="h-9 w-64 mb-2" />
+                            <Skeleton className="h-5 w-48" />
+                        </>
+                    ) : (
+                        <>
+                             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-headline text-foreground">
+                                Welcome, {userData?.name || 'Faculty'}
+                            </h1>
+                            <div className="flex items-center gap-2 mt-1">
+                                <p className="text-muted-foreground">
+                                    Your dashboard for:
+                                </p>
+                                {userData?.branch?.map(b => <Badge key={b} variant="secondary">{b}</Badge>)}
+                            </div>
+                        </>
+                     )}
                 </div>
                  <Button asChild variant="outline" className="shrink-0">
                     <Link href="/chat">

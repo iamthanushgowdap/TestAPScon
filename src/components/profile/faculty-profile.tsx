@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Briefcase, BookCopy, KeyRound, Bot, Edit, Save } from "lucide-react";
+import { User, Briefcase, BookCopy, KeyRound, Bot, Edit, Save, Network } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
@@ -28,6 +28,7 @@ interface FacultyData {
     name: string;
     email: string;
     photoURL?: string;
+    branch?: string[];
     subjects?: string[];
     groups?: number;
 }
@@ -56,6 +57,7 @@ export default function FacultyProfile() {
                         name: data.name || user.displayName || 'Faculty Member',
                         email: user.email || '',
                         photoURL: user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
+                        branch: data.branch || [],
                         subjects: data.subjects || ['Machine Learning', 'Quantum Computing'],
                         groups: data.groups || 3,
                     });
@@ -64,6 +66,7 @@ export default function FacultyProfile() {
                         name: user.displayName || 'Faculty Member',
                         email: user.email || '',
                         photoURL: user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
+                        branch: [],
                         subjects: ['Machine Learning', 'Quantum Computing'],
                         groups: 3,
                     });
@@ -176,11 +179,17 @@ export default function FacultyProfile() {
                             </Button>
                             <h2 className="text-2xl font-bold font-headline">{userData.name}</h2>
                             <p className="text-muted-foreground">{userData.email}</p>
-                            <div className="mt-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground"
-                                style={{'--tw-bg-opacity': 0.5, backgroundColor: 'hsl(var(--primary))'}}
-                            >
-                                <Briefcase className="mr-1 h-3 w-3" />
-                                Faculty
+                             <div className="flex flex-wrap justify-center gap-2 mt-4">
+                                <Badge variant="default" className="bg-primary/80">
+                                    <Briefcase className="mr-1 h-3 w-3" />
+                                    Faculty
+                                </Badge>
+                                {userData.branch?.map(b => (
+                                    <Badge key={b} variant="secondary">
+                                        <Network className="mr-1 h-3 w-3" />
+                                        {b}
+                                    </Badge>
+                                ))}
                             </div>
                         </CardContent>
                     </Card>
