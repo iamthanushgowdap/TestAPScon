@@ -66,55 +66,42 @@ export default function StudentManagementPage() {
     // Effect to fetch students based on faculty's branches
     useEffect(() => {
         if (!currentUser || facultyBranches.length === 0) {
+            setLoading(false);
             if (permissionError) {
-                toast({
+                 toast({
                     title: "Access Denied",
                     description: "You do not have permission to view students.",
                     variant: "destructive"
                 });
             }
-            setLoading(false);
             return;
         };
 
-        const unsubscribes: Unsubscribe[] = [];
-        const allStudents: Record<string, Student> = {};
+        const q = query(collection(db, "users"), where("role", "==", "student"), where("branch", "in", facultyBranches));
 
-        facultyBranches.forEach(branch => {
-            const q = query(
-                collection(db, "users"),
-                where("role", "==", "student"),
-                where("branch", "==", branch)
-            );
-
-            const unsubscribe = onSnapshot(q, (querySnapshot) => {
-                querySnapshot.forEach((doc) => {
-                    allStudents[doc.id] = { id: doc.id, ...doc.data() } as Student;
-                });
-                setStudents(Object.values(allStudents));
-                setLoading(false);
-                setPermissionError(false);
-            }, (error) => {
-                console.error(`Error fetching students for branch ${branch}:`, error);
-                if (error.message.includes('permission-denied')) {
-                    setPermissionError(true);
-                    toast({
-                        title: "Permission Denied",
-                        description: `Could not fetch students for branch: ${branch}.`,
-                        variant: "destructive"
-                    });
-                }
-                setLoading(false);
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const allStudents: Student[] = [];
+            querySnapshot.forEach((doc) => {
+                allStudents.push({ id: doc.id, ...doc.data() } as Student);
             });
-            unsubscribes.push(unsubscribe);
-        });
-        
-        // If there are branches, don't show loading forever if they are all empty
-        if (facultyBranches.length > 0) {
+            setStudents(allStudents);
             setLoading(false);
-        }
+            setPermissionError(false);
+        }, (error) => {
+            console.error(`Error fetching students:`, error);
+            if (error.message.includes('permission-denied') || error.message.includes('Missing or insufficient permissions')) {
+                setPermissionError(true);
+                toast({
+                    title: "Permission Denied",
+                    description: `Could not fetch students.`,
+                    variant: "destructive"
+                });
+            }
+            setStudents([]);
+            setLoading(false);
+        });
 
-        return () => unsubscribes.forEach(unsub => unsub());
+        return () => unsubscribe();
 
     }, [currentUser, facultyBranches, toast, permissionError]);
 

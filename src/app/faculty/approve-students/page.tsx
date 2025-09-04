@@ -31,7 +31,7 @@ export default function ApproveStudentsPage() {
     const { toast } = useToast();
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [facultyBranches, setFacultyBranches] = useState<string[]>([]);
-     const [permissionError, setPermissionError] = useState(false);
+    const [permissionError, setPermissionError] = useState(false);
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -46,17 +46,22 @@ export default function ApproveStudentsPage() {
 
         const fetchFacultyData = async () => {
             const facultyDocRef = doc(db, 'users', currentUser.uid);
-            const docSnap = await getDoc(facultyDocRef);
-            if (docSnap.exists() && docSnap.data().role === 'faculty') {
-                const branches = docSnap.data().branch || [];
-                setFacultyBranches(Array.isArray(branches) ? branches : [branches]);
-            } else {
+            try {
+                const docSnap = await getDoc(facultyDocRef);
+                if (docSnap.exists() && docSnap.data().role === 'faculty') {
+                    const branches = docSnap.data().branch || [];
+                    setFacultyBranches(Array.isArray(branches) ? branches : [branches]);
+                } else {
+                    setPermissionError(true);
+                    toast({
+                        title: "Access Denied",
+                        description: "You do not have permission to view this page.",
+                        variant: "destructive"
+                    });
+                }
+            } catch (error) {
                  setPermissionError(true);
-                 toast({
-                    title: "Access Denied",
-                    description: "You do not have permission to view this page.",
-                    variant: "destructive"
-                });
+                 setLoading(false);
             }
         };
 
@@ -70,40 +75,37 @@ export default function ApproveStudentsPage() {
             return;
         }
 
-        const unsubscribes: Unsubscribe[] = [];
-        const allStudents: Record<string, PendingStudent> = {};
+        const q = query(
+            collection(db, "users"),
+            where("status", "==", "pending"),
+            where("role", "==", "student"),
+            where("branch", "in", facultyBranches)
+        );
 
-        facultyBranches.forEach(branch => {
-            const q = query(
-                collection(db, "users"),
-                where("status", "==", "pending"),
-                where("role", "==", "student"),
-                where("branch", "==", branch)
-            );
-
-            const unsubscribe = onSnapshot(q, (querySnapshot) => {
-                querySnapshot.forEach((doc) => {
-                    allStudents[doc.id] = { id: doc.id, ...doc.data() } as PendingStudent;
-                });
-                setStudents(Object.values(allStudents));
-                setLoading(false);
-                setPermissionError(false);
-            }, (error) => {
-                console.error(`Error fetching students for branch ${branch}:`, error);
-                if (error.message.includes('permission-denied')) {
-                    setPermissionError(true);
-                }
-                setLoading(false);
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const fetchedStudents: PendingStudent[] = [];
+            querySnapshot.forEach((doc) => {
+                fetchedStudents.push({ id: doc.id, ...doc.data() } as PendingStudent);
             });
-            unsubscribes.push(unsubscribe);
-        });
-        
-        if (facultyBranches.length > 0) {
+            setStudents(fetchedStudents);
             setLoading(false);
-        }
+            setPermissionError(false);
+        }, (error) => {
+            console.error("Error fetching students:", error);
+            if (error.message.includes('permission-denied') || error.message.includes('Missing or insufficient permissions')) {
+                setPermissionError(true);
+                 toast({
+                    title: "Permission Denied",
+                    description: "You may not have permission to view pending students.",
+                    variant: "destructive"
+                });
+            }
+            setStudents([]);
+            setLoading(false);
+        });
 
-        return () => unsubscribes.forEach(unsub => unsub());
-    }, [currentUser, facultyBranches]);
+        return () => unsubscribe();
+    }, [currentUser, facultyBranches, toast]);
 
     const handleApproval = async (id: string, newStatus: 'approved' | 'declined') => {
         const studentRef = doc(db, 'users', id);
