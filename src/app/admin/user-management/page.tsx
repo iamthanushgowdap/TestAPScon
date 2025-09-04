@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { collection, onSnapshot, doc, deleteDoc, query } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   AlertDialog,
@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
 type UserRole = 'student' | 'faculty' | 'admin';
 type UserStatus = 'pending' | 'approved' | 'declined';
@@ -43,8 +44,24 @@ export default function UserManagementPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const { toast } = useToast();
+    const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+    const [permissionError, setPermissionError] = useState(false);
 
     useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            setCurrentUser(user);
+        });
+        return () => unsubscribeAuth();
+    }, []);
+
+
+    useEffect(() => {
+        if (!currentUser) {
+            setLoading(false);
+            return;
+        }
+
+        setPermissionError(false);
         const q = query(collection(db, "users"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const fetchedUsers: UserData[] = [];
@@ -57,6 +74,7 @@ export default function UserManagementPage() {
         }, (error) => {
             console.error("Error fetching users: ", error);
             if (error.message.includes('permission-denied')) {
+                setPermissionError(true);
                 toast({
                     title: "Permission Denied",
                     description: "You do not have permission to view all users.",
@@ -67,7 +85,7 @@ export default function UserManagementPage() {
         });
 
         return () => unsubscribe();
-    }, [toast]);
+    }, [currentUser, toast]);
 
     useEffect(() => {
         const results = users.filter(user =>
@@ -153,7 +171,7 @@ export default function UserManagementPage() {
                             {filteredUsers.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center text-muted-foreground">
-                                       No users found. You may not have permission to view them.
+                                       {permissionError ? "You do not have permission to view users." : "No users found."}
                                     </TableCell>
                                 </TableRow>
                             ) : (

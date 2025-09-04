@@ -45,12 +45,7 @@ export default function AdminDashboardPage() {
 
      useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                setCurrentUser(user);
-            } else {
-                setCurrentUser(null);
-                setLoading(false);
-            }
+            setCurrentUser(user);
         });
         return () => unsubscribeAuth();
     }, []);

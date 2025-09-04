@@ -34,6 +34,7 @@ export default function ApproveStudentsPage() {
     const fetchStudents = useCallback(async (user: User) => {
         setLoading(true);
         setPermissionError(false);
+        setStudents([]);
 
         try {
             const facultyDocRef = doc(db, 'users', user.uid);
@@ -52,7 +53,6 @@ export default function ApproveStudentsPage() {
 
             const facultyBranches = docSnap.data().branch || [];
             if (facultyBranches.length === 0) {
-                setStudents([]);
                 setLoading(false);
                 return;
             }
@@ -73,7 +73,7 @@ export default function ApproveStudentsPage() {
 
         } catch (error: any) {
             console.error("Error fetching students:", error);
-            if (error.message.includes('permission-denied') || error.message.includes('Missing or insufficient permissions')) {
+            if (error.message.includes('permission-denied') || error.message.includes('insufficient permissions')) {
                 setPermissionError(true);
                 toast({
                     title: "Permission Denied",
@@ -87,7 +87,6 @@ export default function ApproveStudentsPage() {
                     variant: "destructive"
                 });
             }
-            setStudents([]);
         } finally {
             setLoading(false);
         }
@@ -163,14 +162,14 @@ export default function ApproveStudentsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {students.length === 0 && !loading && (
+                            {students.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center text-muted-foreground">
                                         {permissionError ? "You do not have permission to view pending students." : "No pending students found for your branch(es)."}
                                     </TableCell>
                                 </TableRow>
-                            )}
-                            {students.map(student => (
+                            ) : (
+                                students.map(student => (
                                 <TableRow key={student.id}>
                                     <TableCell>{student.name}</TableCell>
                                     <TableCell>{student.email}</TableCell>

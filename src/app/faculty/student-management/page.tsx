@@ -36,6 +36,8 @@ export default function StudentManagementPage() {
     const fetchStudents = useCallback(async (user: User) => {
         setLoading(true);
         setPermissionError(false);
+        setStudents([]);
+
         try {
             const facultyDocRef = doc(db, 'users', user.uid);
             const docSnap = await getDoc(facultyDocRef);
@@ -53,7 +55,6 @@ export default function StudentManagementPage() {
 
             const facultyBranches = docSnap.data().branch || [];
             if (facultyBranches.length === 0) {
-                setStudents([]);
                 setLoading(false);
                 return;
             }
@@ -70,10 +71,11 @@ export default function StudentManagementPage() {
                 allStudents.push({ id: doc.id, ...doc.data() } as Student);
             });
             setStudents(allStudents);
+            setFilteredStudents(allStudents);
 
         } catch (error: any) {
             console.error("Error fetching students:", error);
-            if (error.message.includes('permission-denied') || error.message.includes('Missing or insufficient permissions')) {
+            if (error.message.includes('permission-denied') || error.message.includes('insufficient permissions')) {
                 setPermissionError(true);
                 toast({
                     title: "Permission Denied",
@@ -87,7 +89,6 @@ export default function StudentManagementPage() {
                     variant: "destructive"
                 });
             }
-            setStudents([]);
         } finally {
             setLoading(false);
         }

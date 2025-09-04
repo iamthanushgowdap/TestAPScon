@@ -8,9 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Edit, Trash2, Search, Briefcase, PlusCircle, ChevronsUpDown, Check } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
-import { collection, onSnapshot, doc, deleteDoc, query, where, addDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, query, where, addDoc, updateDoc, setDoc, getDocs } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, onAuthStateChanged, User } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   AlertDialog,
@@ -59,16 +59,30 @@ export default function FacultyManagementPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const { toast } = useToast();
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [permissionError, setPermissionError] = useState(false);
     
     // State for the dialog
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentFaculty, setCurrentFaculty] = useState<Partial<FacultyData & { password?: string, branch?: string[] }>>({});
     const [isSaving, setIsSaving] = useState(false);
-    const [openBranchPopover, setOpenBranchPopover] = useState(false);
 
 
     useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            setCurrentUser(user);
+        });
+        return () => unsubscribeAuth();
+    }, []);
+
+    useEffect(() => {
+        if (!currentUser) {
+            setLoading(false);
+            return;
+        }
+        setPermissionError(false);
+
         const q = query(collection(db, "users"), where("role", "==", "faculty"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const fetchedFaculty: FacultyData[] = [];
@@ -81,6 +95,7 @@ export default function FacultyManagementPage() {
         }, (error) => {
             console.error("Error fetching faculty: ", error);
             if(error.message.includes('permission-denied')) {
+                 setPermissionError(true);
                  toast({
                     title: "Permission Denied",
                     description: `Could not fetch faculty data.`,
@@ -111,7 +126,7 @@ export default function FacultyManagementPage() {
             unsubscribe();
             branchesUnsubscribe();
         }
-    }, [toast]);
+    }, [currentUser, toast]);
 
     useEffect(() => {
         const results = faculty.filter(f =>
@@ -264,7 +279,7 @@ export default function FacultyManagementPage() {
                             {filteredFaculty.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center text-muted-foreground">
-                                        No faculty members found.
+                                        {permissionError ? "You do not have permission to view faculty." : "No faculty members found."}
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -374,56 +389,42 @@ export default function FacultyManagementPage() {
                                 className="col-span-3"
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-start gap-4">
+                         <div className="grid grid-cols-4 items-start gap-4 pt-2">
                             <Label className="text-right pt-2">Branch(es)</Label>
-                            <Popover open={openBranchPopover} onOpenChange={setOpenBranchPopover}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    aria-expanded={openBranchPopover}
-                                    className="col-span-3 justify-between"
-                                    >
-                                    <span className="truncate">
-                                        {currentFaculty.branch?.length ? `${currentFaculty.branch.length} selected` : "Select branch(es)..."}
-                                    </span>
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="p-0">
-                                    <div className="space-y-2 p-2">
-                                         {branches.length === 0 ? (
-                                            <p className="text-center text-sm text-muted-foreground py-2">No branches found.</p>
-                                         ) : (
-                                            branches.map((branch) => {
-                                                const isSelected = currentFaculty.branch?.includes(branch.name) ?? false;
-                                                return (
-                                                    <div 
-                                                        key={branch.id} 
-                                                        className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent cursor-pointer"
-                                                        onClick={() => {
-                                                            const selectedBranches = currentFaculty.branch || [];
-                                                            if (isSelected) {
-                                                                setCurrentFaculty({ ...currentFaculty, branch: selectedBranches.filter(b => b !== branch.name) });
-                                                            } else {
-                                                                setCurrentFaculty({ ...currentFaculty, branch: [...selectedBranches, branch.name] });
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Checkbox
-                                                            id={`branch-${branch.id}`}
-                                                            checked={isSelected}
-                                                        />
-                                                        <Label htmlFor={`branch-${branch.id}`} className="font-normal cursor-pointer flex-1">
-                                                            {branch.name}
-                                                        </Label>
-                                                    </div>
-                                                );
-                                            })
-                                         )}
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
+                            <div className="col-span-3">
+                                <div className="max-h-32 overflow-y-auto space-y-2 border rounded-md p-2">
+                                     {branches.length === 0 ? (
+                                        <p className="text-center text-sm text-muted-foreground py-2">No branches found.</p>
+                                     ) : (
+                                        branches.map((branch) => {
+                                            const isSelected = currentFaculty.branch?.includes(branch.name) ?? false;
+                                            return (
+                                                <div 
+                                                    key={branch.id} 
+                                                    className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent cursor-pointer"
+                                                    onClick={() => {
+                                                        const selectedBranches = currentFaculty.branch || [];
+                                                        if (isSelected) {
+                                                            setCurrentFaculty({ ...currentFaculty, branch: selectedBranches.filter(b => b !== branch.name) });
+                                                        } else {
+                                                            setCurrentFaculty({ ...currentFaculty, branch: [...selectedBranches, branch.name] });
+                                                        }
+                                                    }}
+                                                >
+                                                    <Checkbox
+                                                        id={`branch-${branch.id}`}
+                                                        checked={isSelected}
+                                                        readOnly
+                                                    />
+                                                    <Label htmlFor={`branch-${branch.id}`} className="font-normal cursor-pointer flex-1">
+                                                        {branch.name}
+                                                    </Label>
+                                                </div>
+                                            );
+                                        })
+                                     )}
+                                </div>
+                            </div>
                         </div>
                          {currentFaculty.branch?.length > 0 && (
                             <div className="grid grid-cols-4 items-start gap-4">

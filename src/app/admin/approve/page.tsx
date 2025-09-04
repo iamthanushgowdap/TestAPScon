@@ -29,6 +29,8 @@ export default function ApproveUsersPage() {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
     const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [permissionError, setPermissionError] = useState(false);
+
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -43,6 +45,7 @@ export default function ApproveUsersPage() {
             return;
         };
 
+        setPermissionError(false);
         const q = query(collection(db, "users"), where("status", "==", "pending"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const fetchedStudents: PendingStudent[] = [];
@@ -53,6 +56,14 @@ export default function ApproveUsersPage() {
             setLoading(false);
         }, (error) => {
             console.error("Error fetching students: ", error);
+            if (error.message.includes('permission-denied')) {
+                setPermissionError(true);
+                toast({
+                    title: 'Permission Denied',
+                    description: "You don't have permission to view pending approvals.",
+                    variant: 'destructive'
+                })
+            }
             setStudents([]);
             setLoading(false);
         });
@@ -116,40 +127,41 @@ export default function ApproveUsersPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {students.length === 0 && !loading && (
+                            {students.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center text-muted-foreground">
-                                        No pending students found.
+                                        {permissionError ? "You do not have permission to view this page." : "No pending students found."}
                                     </TableCell>
                                 </TableRow>
+                            ) : (
+                                students.map(student => (
+                                    <TableRow key={student.id}>
+                                        <TableCell>{student.email}</TableCell>
+                                        <TableCell className="font-mono">{student.usn}</TableCell>
+                                        <TableCell>{student.branch}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={
+                                                student.status === 'pending' ? 'secondary' :
+                                                student.status === 'approved' ? 'default' : 'destructive'
+                                            } className="capitalize">
+                                                {student.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {student.status === 'pending' && (
+                                                <div className="flex gap-2 justify-end">
+                                                    <Button size="icon" variant="outline" className="h-8 w-8 text-green-500 hover:bg-green-500/10 hover:text-green-600" onClick={() => handleApproval(student.id, 'approved')}>
+                                                        <Check className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button size="icon" variant="outline" className="h-8 w-8 text-red-500 hover:bg-red-500/10 hover:text-red-600" onClick={() => handleApproval(student.id, 'declined')}>
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
                             )}
-                            {students.map(student => (
-                                <TableRow key={student.id}>
-                                    <TableCell>{student.email}</TableCell>
-                                    <TableCell className="font-mono">{student.usn}</TableCell>
-                                    <TableCell>{student.branch}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={
-                                            student.status === 'pending' ? 'secondary' :
-                                            student.status === 'approved' ? 'default' : 'destructive'
-                                        } className="capitalize">
-                                            {student.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {student.status === 'pending' && (
-                                            <div className="flex gap-2 justify-end">
-                                                <Button size="icon" variant="outline" className="h-8 w-8 text-green-500 hover:bg-green-500/10 hover:text-green-600" onClick={() => handleApproval(student.id, 'approved')}>
-                                                    <Check className="h-4 w-4" />
-                                                </Button>
-                                                <Button size="icon" variant="outline" className="h-8 w-8 text-red-500 hover:bg-red-500/10 hover:text-red-600" onClick={() => handleApproval(student.id, 'declined')}>
-                                                    <X className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            ))}
                         </TableBody>
                     </Table>
                     )}
