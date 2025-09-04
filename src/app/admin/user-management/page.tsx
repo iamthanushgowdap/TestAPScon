@@ -29,7 +29,7 @@ type UserStatus = 'pending' | 'approved' | 'declined';
 
 interface UserData {
     id: string;
-    name: string;
+    name?: string;
     email: string;
     usn?: string;
     role: UserRole;
@@ -68,8 +68,8 @@ export default function UserManagementPage() {
 
     useEffect(() => {
         const results = users.filter(user =>
-            user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (user.usn && user.usn.toLowerCase().includes(searchTerm.toLowerCase()))
         );
         setFilteredUsers(results);
@@ -156,7 +156,7 @@ export default function UserManagementPage() {
                             ) : (
                                 filteredUsers.map(user => (
                                 <TableRow key={user.id}>
-                                    <TableCell className="font-medium">{user.name}</TableCell>
+                                    <TableCell className="font-medium">{user.name || 'N/A'}</TableCell>
                                     <TableCell>{user.email}</TableCell>
                                     <TableCell className="font-mono">{user.usn || 'N/A'}</TableCell>
                                     <TableCell>
