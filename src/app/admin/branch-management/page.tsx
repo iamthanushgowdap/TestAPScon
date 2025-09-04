@@ -64,7 +64,7 @@ export default function BranchManagementPage() {
             console.error("Error fetching branches: ", error);
             toast({
                 title: "Permission Denied",
-                description: "You may not have permission to view branches.",
+                description: "You may not have permission to view branches. Please check your Firestore security rules.",
                 variant: "destructive"
             });
             setLoading(false);
@@ -181,7 +181,7 @@ export default function BranchManagementPage() {
                             {filteredBranches.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={3} className="text-center text-muted-foreground">
-                                        No branches found.
+                                        No branches found or permission denied.
                                     </TableCell>
                                 </TableRow>
                             ) : (

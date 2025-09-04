@@ -76,7 +76,7 @@ export default function FacultyManagementPage() {
             console.error("Error fetching faculty: ", error);
             toast({
                 title: "Permission Denied",
-                description: "You may not have permission to view faculty. Please update Firestore security rules.",
+                description: "You may not have permission to view faculty. Please check your Firestore security rules.",
                 variant: "destructive"
             });
             setLoading(false);
@@ -224,7 +224,7 @@ export default function FacultyManagementPage() {
                             {filteredFaculty.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center text-muted-foreground">
-                                        No faculty members found.
+                                        No faculty members found or permission denied.
                                     </TableCell>
                                 </TableRow>
                             ) : (

@@ -43,8 +43,6 @@ export default function ApproveUsersPage() {
             return;
         };
 
-        // This query now safely fetches only the current user's data to prevent permission errors.
-        // To show all students, Firestore rules must be updated to allow admin list reads.
         const q = query(collection(db, "users"), where("status", "==", "pending"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const fetchedStudents: PendingStudent[] = [];
@@ -55,8 +53,7 @@ export default function ApproveUsersPage() {
             setLoading(false);
         }, (error) => {
             console.error("Error fetching students: ", error);
-            toast({ title: "Error", description: "You may not have permission to view all students. Please update Firestore security rules.", variant: "destructive" });
-            // Set students to an empty array to clear the list on error and prevent crashes.
+            toast({ title: "Permission Denied", description: "You may not have permission to view students. Please check your Firestore security rules.", variant: "destructive" });
             setStudents([]);
             setLoading(false);
         });
@@ -94,7 +91,7 @@ export default function ApproveUsersPage() {
                 <CardHeader>
                     <CardTitle>Pending Registrations</CardTitle>
                     <CardDescription>
-                        The following students have registered and are awaiting approval. Note: A 'permission-denied' error will prevent the list from appearing.
+                        The following students have registered and are awaiting approval.
                     </CardDescription>
                      <div className="relative pt-2">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />

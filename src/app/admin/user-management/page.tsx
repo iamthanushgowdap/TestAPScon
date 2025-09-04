@@ -57,7 +57,7 @@ export default function UserManagementPage() {
             console.error("Error fetching users: ", error);
             toast({
                 title: "Permission Denied",
-                description: "You may not have permission to view all users. Please update Firestore security rules to allow admin list reads.",
+                description: "You may not have permission to view all users. Please check your Firestore security rules.",
                 variant: "destructive"
             });
             setLoading(false);
@@ -150,7 +150,7 @@ export default function UserManagementPage() {
                             {filteredUsers.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center text-muted-foreground">
-                                        No users found.
+                                        No users found or permission denied.
                                     </TableCell>
                                 </TableRow>
                             ) : (
