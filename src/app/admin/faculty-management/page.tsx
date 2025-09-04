@@ -33,7 +33,11 @@ import {
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-type UserRole = 'student' | 'faculty' | 'admin';
+interface Branch {
+    id: string;
+    name: string;
+    status: 'online' | 'offline';
+}
 
 interface FacultyData {
     id: string;
@@ -41,12 +45,13 @@ interface FacultyData {
     email: string;
     phone?: string;
     branch?: string;
-    role?: UserRole;
+    title?: string;
 }
 
 export default function FacultyManagementPage() {
     const [faculty, setFaculty] = useState<FacultyData[]>([]);
     const [filteredFaculty, setFilteredFaculty] = useState<FacultyData[]>([]);
+    const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const { toast } = useToast();
@@ -77,7 +82,17 @@ export default function FacultyManagementPage() {
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        const branchesQuery = query(collection(db, "branches"), where("status", "==", "online"));
+        const branchesUnsubscribe = onSnapshot(branchesQuery, (snapshot) => {
+            const fetchedBranches: Branch[] = [];
+            snapshot.forEach(doc => fetchedBranches.push({ id: doc.id, ...doc.data() } as Branch));
+            setBranches(fetchedBranches);
+        });
+
+        return () => {
+            unsubscribe();
+            branchesUnsubscribe();
+        }
     }, [toast]);
 
     useEffect(() => {
@@ -106,7 +121,7 @@ export default function FacultyManagementPage() {
     
     const openAddDialog = () => {
         setIsEditMode(false);
-        setCurrentFaculty({ role: 'faculty' });
+        setCurrentFaculty({ });
         setIsDialogOpen(true);
     };
 
@@ -128,7 +143,8 @@ export default function FacultyManagementPage() {
                 email: currentFaculty.email,
                 phone: currentFaculty.phone || '',
                 branch: currentFaculty.branch || '',
-                role: currentFaculty.role || 'faculty',
+                title: currentFaculty.title || '',
+                role: 'faculty',
             };
 
             if (isEditMode) {
@@ -144,7 +160,7 @@ export default function FacultyManagementPage() {
                     status: 'approved',
                     createdAt: new Date(),
                 });
-                toast({ title: "Success", description: "Faculty member added. They can now log in." });
+                toast({ title: "Success", description: "Faculty member added. A full implementation would also create an Authentication user." });
             }
             setIsDialogOpen(false);
         } catch (error) {
@@ -199,13 +215,15 @@ export default function FacultyManagementPage() {
                             <TableRow>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Email</TableHead>
+                                <TableHead>Branch</TableHead>
+                                <TableHead>Title</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredFaculty.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground">
                                         No faculty members found.
                                     </TableCell>
                                 </TableRow>
@@ -214,6 +232,8 @@ export default function FacultyManagementPage() {
                                 <TableRow key={f.id}>
                                     <TableCell className="font-medium">{f.name || 'N/A'}</TableCell>
                                     <TableCell>{f.email}</TableCell>
+                                    <TableCell>{f.branch || 'N/A'}</TableCell>
+                                    <TableCell>{f.title || 'N/A'}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex gap-2 justify-end">
                                             <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => openEditDialog(f)}>
@@ -288,28 +308,28 @@ export default function FacultyManagementPage() {
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="branch" className="text-right">Branch</Label>
+                            <Label htmlFor="title" className="text-right">Title</Label>
                             <Input 
-                                id="branch" 
-                                placeholder="e.g., Computer Science"
-                                value={currentFaculty.branch || ''} 
-                                onChange={(e) => setCurrentFaculty({...currentFaculty, branch: e.target.value })}
+                                id="title" 
+                                placeholder="e.g., HOD, Asst. Professor"
+                                value={currentFaculty.title || ''} 
+                                onChange={(e) => setCurrentFaculty({...currentFaculty, title: e.target.value })}
                                 className="col-span-3"
                             />
                         </div>
-                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="role" className="text-right">Role</Label>
-                             <Select
-                                value={currentFaculty.role}
-                                onValueChange={(value) => setCurrentFaculty({...currentFaculty, role: value as UserRole})}
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="branch" className="text-right">Branch</Label>
+                            <Select
+                                value={currentFaculty.branch}
+                                onValueChange={(value) => setCurrentFaculty({ ...currentFaculty, branch: value })}
                             >
                                 <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="Select a role" />
+                                    <SelectValue placeholder="Select a branch" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="faculty">Faculty</SelectItem>
-                                    <SelectItem value="admin">Admin</SelectItem>
-                                    <SelectItem value="student">Student</SelectItem>
+                                    {branches.map(branch => (
+                                        <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -323,3 +343,5 @@ export default function FacultyManagementPage() {
         </div>
     );
 }
+
+    

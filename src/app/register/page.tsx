@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GraduationCap, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -12,8 +12,15 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+interface Branch {
+    id: string;
+    name: string;
+    status: 'online' | 'offline';
+}
 
 export default function RegisterPage() {
   const { toast } = useToast();
@@ -26,6 +33,17 @@ export default function RegisterPage() {
   const [usnBranch, setUsnBranch] = useState('');
   const [usnRoll, setUsnRoll] = useState('');
   const [loading, setLoading] = useState(false);
+  const [branches, setBranches] = useState<Branch[]>([]);
+
+  useEffect(() => {
+    const branchesQuery = query(collection(db, "branches"), where("status", "==", "online"));
+    const unsubscribe = onSnapshot(branchesQuery, (snapshot) => {
+        const fetchedBranches: Branch[] = [];
+        snapshot.forEach(doc => fetchedBranches.push({ id: doc.id, ...doc.data() } as Branch));
+        setBranches(fetchedBranches);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +53,10 @@ export default function RegisterPage() {
             description: 'Passwords do not match.',
             variant: 'destructive',
         });
+        return;
+    }
+     if (!usnBranch) {
+        toast({ title: 'Error', description: 'Please select a branch.', variant: 'destructive' });
         return;
     }
     setLoading(true);
@@ -126,16 +148,16 @@ export default function RegisterPage() {
                             onChange={(e) => setUsnYear(e.target.value.replace(/[^0-9]/g, ''))}
                             className="w-16 text-center"
                         />
-                        <Input 
-                            id="usn-branch" 
-                            type="text" 
-                            placeholder="CS" 
-                            maxLength={3} 
-                            required
-                            value={usnBranch}
-                            onChange={(e) => setUsnBranch(e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase())}
-                             className="w-20 text-center"
-                        />
+                        <Select value={usnBranch} onValueChange={setUsnBranch}>
+                            <SelectTrigger className="w-28 text-center">
+                                <SelectValue placeholder="Branch" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {branches.map(branch => (
+                                    <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                         <Input 
                             id="usn-roll" 
                             type="text" 
@@ -177,3 +199,5 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+    

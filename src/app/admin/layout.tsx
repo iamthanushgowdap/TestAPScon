@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { BotMessageSquare, LayoutDashboard, Users, Shield, Database, Megaphone, GraduationCap, Bell, BarChart, FileText, UserCheck, User as UserIcon, LogOut, Briefcase } from 'lucide-react';
+import { BotMessageSquare, LayoutDashboard, Users, Shield, Database, Megaphone, GraduationCap, Bell, BarChart, FileText, UserCheck, User as UserIcon, LogOut, Briefcase, Network } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -41,11 +41,12 @@ const navItems = [
   { href: '/admin/approve', label: 'Approve Users', icon: UserCheck },
   { href: '/admin/user-management', label: 'User Management', icon: Users },
   { href: '/admin/faculty-management', label: 'Faculty Management', icon: Briefcase },
+  { href: '/admin/branch-management', label: 'Branch Management', icon: Network },
   { href: '#', label: 'Security', icon: Shield },
-  { href: '#', label: 'Database', icon: Database },
-  { href: '#', label: 'Analytics', icon: BarChart },
-  { href: '#', label: 'Reports', icon: FileText },
-  { href: '#', label: 'Announcements', icon: Megaphone },
+  { href: '#', 'label': 'Database', 'icon': Database },
+  { href: '#', 'label': 'Analytics', 'icon': BarChart },
+  { href: '#', 'label': 'Reports', 'icon': FileText },
+  { href: '#', 'label': 'Announcements', 'icon': Megaphone },
   { href: '/chat', label: 'Cera.AI', icon: BotMessageSquare },
 ];
 
@@ -161,3 +162,5 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
+
+    
