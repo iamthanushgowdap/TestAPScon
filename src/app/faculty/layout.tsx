@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { BotMessageSquare, LayoutDashboard, Users, Upload, ClipboardCheck, Megaphone, GraduationCap, Bell, User as UserIcon, LogOut } from 'lucide-react';
+import { BotMessageSquare, LayoutDashboard, Users, Upload, ClipboardCheck, Megaphone, GraduationCap, Bell, User as UserIcon, LogOut, UserCheck } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -35,7 +35,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 
 const navItems = [
   { href: '/faculty/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '#', label: 'Student Groups', icon: Users },
+  { href: '/faculty/approve-students', label: 'Approve Students', icon: UserCheck },
   { href: '#', label: 'Assignments', icon: Upload },
   { href: '#', label: 'Attendance', icon: ClipboardCheck },
   { href: '#', label: 'Announcements', icon: Megaphone },

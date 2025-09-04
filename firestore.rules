@@ -1,43 +1,56 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
   
     function isAdmin() {
-      // Checks if the requesting user has the 'admin' role in their own user document.
+      // User is an admin if their own user document has role 'admin'.
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    function isFaculty() {
+        // User is faculty if their own user document has role 'faculty'.
+        return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'faculty';
+    }
+
     function isOwner(userId) {
-      // Checks if the requesting user is the owner of the document.
+      // User is the owner of the document.
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // --- Rules for Users ---
+    function facultyCanAccessStudent(studentData) {
+        // Check if the student's branch is in the faculty's list of assigned branches.
+        let facultyData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+        return studentData.role == 'student' && studentData.branch in facultyData.branch;
+    }
+
     match /users/{userId} {
-      // Any user can create their own user document during registration.
+      // ANYONE can create a user document (i.e., register). Status is 'pending' by default.
       allow create: if request.auth != null;
 
-      // Users can read their own profile. Admins can read any profile.
-      allow get: if isOwner(userId) || isAdmin();
-      
-      // Admins can list all users for management pages.
-      allow list: if isAdmin();
+      // - Users can read their own profile.
+      // - Admins can read any user profile.
+      // - Faculty can read profiles of students in their assigned branches.
+      allow get: if isOwner(userId) || isAdmin() || (isFaculty() && facultyCanAccessStudent(resource.data));
                    
-      // Users can update their own profile. Admins can update any profile.
-      allow update: if isOwner(userId) || isAdmin();
+      // - Admins can list all users.
+      // - Faculty can list students who are in their assigned branch(es) for the approval page.
+      allow list: if isAdmin() || (isFaculty() && request.query.branch in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch);
 
-      // Only the owner or an admin can delete a user account.
+      // - Users can update their own profile.
+      // - Admins can update any user profile (for approval, role changes, etc.).
+      // - Faculty can update student profiles in their branch (for approval).
+      allow update: if isOwner(userId) || isAdmin() || (isFaculty() && facultyCanAccessStudent(request.resource.data));
+
+      // Only the owner or an admin can delete a user record.
       allow delete: if isOwner(userId) || isAdmin();
     }
 
-    // --- Rules for Branches ---
     match /branches/{branchId} {
-      // Allow public read access for branches, as this is needed for the registration page dropdown.
-      // This is safe as branch names are not sensitive data.
-      allow read: if true;
-      
-      // Only admins can create, update, or delete branches.
-      allow write: if isAdmin();
+        // ANYONE can view the list of branches (e.g., for registration dropdowns).
+        allow read: if true;
+        // ONLY ADMINS can create, update, or delete branches.
+        allow write: if isAdmin();
     }
   }
 }
