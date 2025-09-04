@@ -55,6 +55,7 @@ export default function RegisterPage() {
       // Step 2: Create a corresponding user document in Firestore with the user's UID as the document ID
       await setDoc(doc(db, 'users', user.uid), {
         name: name,
+        email: userEmail,
         usn: usn,
         role: 'student',
         status: 'pending',
