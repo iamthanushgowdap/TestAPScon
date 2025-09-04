@@ -48,7 +48,7 @@ interface FacultyData {
     name?: string;
     email: string;
     phone?: string;
-    branch?: string[];
+    branch?: string[] | string;
     title?: string;
 }
 
@@ -63,7 +63,7 @@ export default function FacultyManagementPage() {
     // State for the dialog
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
-    const [currentFaculty, setCurrentFaculty] = useState<Partial<FacultyData & { password?: string }>>({});
+    const [currentFaculty, setCurrentFaculty] = useState<Partial<FacultyData & { password?: string, branch?: string[] }>>({});
     const [isSaving, setIsSaving] = useState(false);
     const [openBranchPopover, setOpenBranchPopover] = useState(false);
 
@@ -147,7 +147,10 @@ export default function FacultyManagementPage() {
 
     const openEditDialog = (facultyMember: FacultyData) => {
         setIsEditMode(true);
-        setCurrentFaculty(facultyMember);
+        const branchArray = Array.isArray(facultyMember.branch) 
+            ? facultyMember.branch 
+            : (typeof facultyMember.branch === 'string' ? [facultyMember.branch] : []);
+        setCurrentFaculty({...facultyMember, branch: branchArray});
         setIsDialogOpen(true);
     };
     
@@ -197,6 +200,15 @@ export default function FacultyManagementPage() {
             setIsSaving(false);
         }
     };
+    
+    const renderBranchBadges = (branchData: string | string[] | undefined) => {
+        if (!branchData) {
+            return 'N/A';
+        }
+        const branches = Array.isArray(branchData) ? branchData : [branchData];
+        return branches.map(b => <Badge key={b} variant="secondary">{b}</Badge>);
+    }
+
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
@@ -262,7 +274,7 @@ export default function FacultyManagementPage() {
                                     <TableCell>{f.email}</TableCell>
                                     <TableCell>
                                         <div className="flex flex-wrap gap-1">
-                                            {f.branch?.map(b => <Badge key={b} variant="secondary">{b}</Badge>) || 'N/A'}
+                                            {renderBranchBadges(f.branch)}
                                         </div>
                                     </TableCell>
                                     <TableCell>{f.title || 'N/A'}</TableCell>
