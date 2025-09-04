@@ -9,6 +9,7 @@ import { Bar, Pie, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, PieChart,
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 const attendanceData = [
     { name: 'Jan', attendance: 88 },
@@ -37,38 +38,57 @@ export default function AdminDashboardPage() {
     const [studentCount, setStudentCount] = useState(0);
     const [facultyCount, setFacultyCount] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [permissionError, setPermissionError] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
-        // These queries are likely to fail if Firestore rules don't allow listing users.
-        // The error is handled gracefully by the onSnapshot error callback.
         const usersRef = collection(db, 'users');
+
+        const handleError = (error: Error, type: string) => {
+            console.error(`Firestore error (${type}):`, error.message);
+            if (error.message.includes('permission-denied')) {
+                if (!permissionError) { // Show toast only once
+                     toast({
+                        title: "Permission Denied",
+                        description: `Could not fetch ${type} data. Please check your Firestore security rules.`,
+                        variant: "destructive"
+                    });
+                    setPermissionError(true);
+                }
+            }
+            setLoading(false);
+        };
 
         const studentQuery = query(usersRef, where('role', '==', 'student'));
         const facultyQuery = query(usersRef, where('role', '==', 'faculty'));
 
-        const studentUnsubscribe = onSnapshot(studentQuery, (snapshot) => {
-            setStudentCount(snapshot.size);
-            setLoading(false);
-        }, (error) => {
-            console.error("Firestore error (students):", error.message);
-            setStudentCount(0); // Set to 0 on error to avoid stale data
-            setLoading(false);
-        });
+        const studentUnsubscribe = onSnapshot(studentQuery, 
+            (snapshot) => {
+                setStudentCount(snapshot.size);
+                setLoading(false);
+            }, 
+            (error) => {
+                handleError(error, 'students');
+                setStudentCount(0);
+            }
+        );
 
-        const facultyUnsubscribe = onSnapshot(facultyQuery, (snapshot) => {
-            setFacultyCount(snapshot.size);
-            setLoading(false);
-        }, (error) => {
-            console.error("Firestore error (faculty):", error.message);
-            setFacultyCount(0); // Set to 0 on error
-            setLoading(false);
-        });
+        const facultyUnsubscribe = onSnapshot(facultyQuery, 
+            (snapshot) => {
+                setFacultyCount(snapshot.size);
+                setLoading(false);
+            }, 
+            (error) => {
+                handleError(error, 'faculty');
+                setFacultyCount(0);
+            }
+        );
 
         return () => {
             studentUnsubscribe();
             facultyUnsubscribe();
         };
-    }, []);
+    }, [toast, permissionError]);
     
     const quickStats = [
         { title: "Total Students", value: studentCount.toString(), icon: Users, color: "text-blue-400" },
@@ -104,9 +124,9 @@ export default function AdminDashboardPage() {
                             ) : (
                                 <div className="text-2xl font-bold">{stat.value}</div>
                             )}
-                            {(stat.title === "Total Students" || stat.title === "Total Faculty") && !loading &&
-                                <p className="text-xs text-muted-foreground">Update rules to see counts</p>
-                            }
+                            {permissionError && (stat.title === "Total Students" || stat.title === "Total Faculty") && (
+                                <p className="text-xs text-destructive">Permission Denied</p>
+                            )}
                         </CardContent>
                     </Card>
                 ))}
