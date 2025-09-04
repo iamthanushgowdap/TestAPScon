@@ -5,11 +5,12 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Edit, Trash2, Search, Briefcase, PlusCircle } from "lucide-react";
+import { Edit, Trash2, Search, Briefcase, PlusCircle, ChevronsUpDown, Check } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { collection, onSnapshot, doc, deleteDoc, query, where, addDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   AlertDialog,
@@ -31,7 +32,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface Branch {
     id: string;
@@ -44,7 +48,7 @@ interface FacultyData {
     name?: string;
     email: string;
     phone?: string;
-    branch?: string;
+    branch?: string[];
     title?: string;
 }
 
@@ -59,8 +63,10 @@ export default function FacultyManagementPage() {
     // State for the dialog
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
-    const [currentFaculty, setCurrentFaculty] = useState<Partial<FacultyData>>({});
+    const [currentFaculty, setCurrentFaculty] = useState<Partial<FacultyData & { password?: string }>>({});
     const [isSaving, setIsSaving] = useState(false);
+    const [openBranchPopover, setOpenBranchPopover] = useState(false);
+
 
     useEffect(() => {
         const q = query(collection(db, "users"), where("role", "==", "faculty"));
@@ -74,6 +80,13 @@ export default function FacultyManagementPage() {
             setLoading(false);
         }, (error) => {
             console.error("Error fetching faculty: ", error);
+            if(error.message.includes('permission-denied')) {
+                 toast({
+                    title: "Permission Denied",
+                    description: `Could not fetch faculty data. Please check your Firestore security rules.`,
+                    variant: "destructive"
+                });
+            }
             setLoading(false);
         });
 
@@ -102,11 +115,13 @@ export default function FacultyManagementPage() {
     }, [searchTerm, faculty]);
 
     const handleDelete = async (userId: string) => {
+        // Note: This only deletes the Firestore record. For a full implementation,
+        // you would need a Firebase Function to delete the corresponding Auth user.
         try {
             await deleteDoc(doc(db, "users", userId));
             toast({
                 title: "Faculty Deleted",
-                description: "The faculty member has been successfully removed.",
+                description: "The faculty member has been successfully removed from the database.",
             });
         } catch (error) {
              toast({
@@ -119,7 +134,7 @@ export default function FacultyManagementPage() {
     
     const openAddDialog = () => {
         setIsEditMode(false);
-        setCurrentFaculty({ });
+        setCurrentFaculty({ branch: [] });
         setIsDialogOpen(true);
     };
 
@@ -134,35 +149,43 @@ export default function FacultyManagementPage() {
             toast({ title: "Error", description: "Name and email are required.", variant: "destructive" });
             return;
         }
+
+        if (!isEditMode && (!currentFaculty.password || currentFaculty.password.length < 6)) {
+             toast({ title: "Error", description: "A password of at least 6 characters is required for new faculty.", variant: "destructive" });
+            return;
+        }
+
         setIsSaving(true);
         try {
             const dataToSave = {
                 name: currentFaculty.name,
                 email: currentFaculty.email,
                 phone: currentFaculty.phone || '',
-                branch: currentFaculty.branch || '',
+                branch: currentFaculty.branch || [],
                 title: currentFaculty.title || '',
                 role: 'faculty',
+                status: 'approved',
             };
 
             if (isEditMode) {
-                // Update existing faculty
                 const docRef = doc(db, 'users', currentFaculty.id!);
                 await updateDoc(docRef, dataToSave);
                 toast({ title: "Success", description: "Faculty member updated." });
             } else {
-                // Add new faculty - NOTE: This only creates the Firestore record.
-                // A full solution requires creating an auth user, which is a backend operation.
-                await addDoc(collection(db, "users"), {
+                // Create user in Firebase Auth
+                const userCredential = await createUserWithEmailAndPassword(auth, currentFaculty.email, currentFaculty.password!);
+                const user = userCredential.user;
+                
+                // Create Firestore document with the same UID
+                await setDoc(doc(db, "users", user.uid), {
                     ...dataToSave,
-                    status: 'approved',
                     createdAt: new Date(),
                 });
-                toast({ title: "Success", description: "Faculty member added. A full implementation would also create an Authentication user." });
+                toast({ title: "Success", description: "New faculty member created successfully." });
             }
             setIsDialogOpen(false);
-        } catch (error) {
-             toast({ title: "Error", description: "Could not save changes.", variant: "destructive" });
+        } catch (error: any) {
+             toast({ title: "Error", description: error.message || "Could not save changes.", variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
@@ -213,7 +236,7 @@ export default function FacultyManagementPage() {
                             <TableRow>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Email</TableHead>
-                                <TableHead>Branch</TableHead>
+                                <TableHead>Branch(es)</TableHead>
                                 <TableHead>Title</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -222,7 +245,7 @@ export default function FacultyManagementPage() {
                             {filteredFaculty.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center text-muted-foreground">
-                                        No faculty members found. You may not have permission to view them.
+                                        No faculty members found.
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -230,7 +253,11 @@ export default function FacultyManagementPage() {
                                 <TableRow key={f.id}>
                                     <TableCell className="font-medium">{f.name || 'N/A'}</TableCell>
                                     <TableCell>{f.email}</TableCell>
-                                    <TableCell>{f.branch || 'N/A'}</TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-wrap gap-1">
+                                            {f.branch?.map(b => <Badge key={b} variant="secondary">{b}</Badge>) || 'N/A'}
+                                        </div>
+                                    </TableCell>
                                     <TableCell>{f.title || 'N/A'}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex gap-2 justify-end">
@@ -247,7 +274,7 @@ export default function FacultyManagementPage() {
                                                     <AlertDialogHeader>
                                                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                                     <AlertDialogDescription>
-                                                        This will permanently delete the faculty member's account. This action cannot be undone.
+                                                        This will permanently delete the faculty member's record. This action cannot be undone. A full implementation would also delete the user from Firebase Authentication.
                                                     </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
@@ -294,6 +321,18 @@ export default function FacultyManagementPage() {
                                 readOnly={isEditMode}
                             />
                         </div>
+                        {!isEditMode && (
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="password" className="text-right">Password</Label>
+                                <Input 
+                                    id="password" 
+                                    type="password"
+                                    value={currentFaculty.password || ''} 
+                                    onChange={(e) => setCurrentFaculty({...currentFaculty, password: e.target.value })}
+                                    className="col-span-3"
+                                />
+                            </div>
+                        )}
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="phone" className="text-right">Phone</Label>
                             <Input 
@@ -316,21 +355,64 @@ export default function FacultyManagementPage() {
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="branch" className="text-right">Branch</Label>
-                            <Select
-                                value={currentFaculty.branch}
-                                onValueChange={(value) => setCurrentFaculty({ ...currentFaculty, branch: value })}
-                            >
-                                <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="Select a branch" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {branches.map(branch => (
-                                        <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Label className="text-right">Branch(es)</Label>
+                            <Popover open={openBranchPopover} onOpenChange={setOpenBranchPopover}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={openBranchPopover}
+                                    className="col-span-3 justify-between"
+                                    >
+                                    <span className="truncate">
+                                        {currentFaculty.branch?.length ? `${currentFaculty.branch.length} selected` : "Select branch(es)..."}
+                                    </span>
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0">
+                                    <Command>
+                                    <CommandInput placeholder="Search branch..." />
+                                    <CommandList>
+                                        <CommandEmpty>No branch found.</CommandEmpty>
+                                        <CommandGroup>
+                                        {branches.map((branch) => (
+                                            <CommandItem
+                                                key={branch.id}
+                                                value={branch.name}
+                                                onSelect={(currentValue) => {
+                                                    const selectedBranches = currentFaculty.branch || [];
+                                                    const isSelected = selectedBranches.includes(branch.name);
+                                                    const newBranches = isSelected
+                                                        ? selectedBranches.filter(b => b !== branch.name)
+                                                        : [...selectedBranches, branch.name];
+                                                    setCurrentFaculty({ ...currentFaculty, branch: newBranches });
+                                                }}
+                                            >
+                                            <Check
+                                                className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    currentFaculty.branch?.includes(branch.name) ? "opacity-100" : "opacity-0"
+                                                )}
+                                            />
+                                            {branch.name}
+                                            </CommandItem>
+                                        ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
                         </div>
+                         {currentFaculty.branch?.length > 0 && (
+                            <div className="grid grid-cols-4 items-start gap-4">
+                                <div className="col-start-2 col-span-3 flex flex-wrap gap-1">
+                                    {currentFaculty.branch.map(b => (
+                                        <Badge key={b} variant="secondary">{b}</Badge>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
@@ -340,4 +422,5 @@ export default function FacultyManagementPage() {
             </Dialog>
         </div>
     );
-}
+
+    
