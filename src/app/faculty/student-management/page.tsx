@@ -8,7 +8,7 @@ import { Users, Search } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
-import { collection, query, where, doc, onSnapshot, getDoc } from 'firebase/firestore';
+import { collection, query, where, doc, onSnapshot, getDoc, Unsubscribe } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -77,44 +77,53 @@ export default function StudentManagementPage() {
             return;
         };
 
-        const q = query(
-            collection(db, "users"), 
-            where("role", "==", "student"),
-            where("branch", "in", facultyBranches)
-        );
-        
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const fetchedStudents: Student[] = [];
-             querySnapshot.forEach((doc) => {
-                fetchedStudents.push({ id: doc.id, ...doc.data() } as Student);
-            });
-            setStudents(fetchedStudents);
-            setFilteredStudents(fetchedStudents);
-            setLoading(false);
-            setPermissionError(false);
-        }, (error) => {
-            console.error("Error fetching students: ", error);
-            if (error.message.includes('permission-denied')){
-                setPermissionError(true);
-                 toast({
-                    title: "Permission Denied",
-                    description: "You do not have permission to view students for these branches.",
-                    variant: "destructive"
-                });
-            }
-            setStudents([]);
-            setLoading(false);
-        });
+        const unsubscribes: Unsubscribe[] = [];
+        const allStudents: Record<string, Student> = {};
 
-        return () => unsubscribe();
+        facultyBranches.forEach(branch => {
+            const q = query(
+                collection(db, "users"),
+                where("role", "==", "student"),
+                where("branch", "==", branch)
+            );
+
+            const unsubscribe = onSnapshot(q, (querySnapshot) => {
+                querySnapshot.forEach((doc) => {
+                    allStudents[doc.id] = { id: doc.id, ...doc.data() } as Student;
+                });
+                setStudents(Object.values(allStudents));
+                setLoading(false);
+                setPermissionError(false);
+            }, (error) => {
+                console.error(`Error fetching students for branch ${branch}:`, error);
+                if (error.message.includes('permission-denied')) {
+                    setPermissionError(true);
+                    toast({
+                        title: "Permission Denied",
+                        description: `Could not fetch students for branch: ${branch}.`,
+                        variant: "destructive"
+                    });
+                }
+                setLoading(false);
+            });
+            unsubscribes.push(unsubscribe);
+        });
+        
+        // If there are branches, don't show loading forever if they are all empty
+        if (facultyBranches.length > 0) {
+            setLoading(false);
+        }
+
+        return () => unsubscribes.forEach(unsub => unsub());
+
     }, [currentUser, facultyBranches, toast, permissionError]);
 
     // Effect for search filtering
      useEffect(() => {
         const results = students.filter(s =>
-            s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            s.usn.toLowerCase().includes(searchTerm.toLowerCase())
+            (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (s.email && s.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (s.usn && s.usn.toLowerCase().includes(searchTerm.toLowerCase()))
         );
         setFilteredStudents(results);
     }, [searchTerm, students]);
