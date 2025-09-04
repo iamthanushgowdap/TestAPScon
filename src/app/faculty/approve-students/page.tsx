@@ -1,15 +1,14 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Check, X, UserCheck, Search } from "lucide-react";
+import { Check, X, UserCheck } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
-import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, getDoc, Unsubscribe } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -30,82 +29,83 @@ export default function ApproveStudentsPage() {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
     const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [facultyBranches, setFacultyBranches] = useState<string[]>([]);
     const [permissionError, setPermissionError] = useState(false);
 
-    useEffect(() => {
-        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-            setCurrentUser(user);
-        });
-        return () => unsubscribeAuth();
-    }, []);
+    const fetchStudents = useCallback(async (user: User) => {
+        setLoading(true);
+        setPermissionError(false);
 
-    // Effect to fetch faculty's branches
-    useEffect(() => {
-        if (!currentUser) return;
+        try {
+            const facultyDocRef = doc(db, 'users', user.uid);
+            const docSnap = await getDoc(facultyDocRef);
 
-        const fetchFacultyData = async () => {
-            const facultyDocRef = doc(db, 'users', currentUser.uid);
-            try {
-                const docSnap = await getDoc(facultyDocRef);
-                if (docSnap.exists() && docSnap.data().role === 'faculty') {
-                    const branches = docSnap.data().branch || [];
-                    setFacultyBranches(Array.isArray(branches) ? branches : [branches]);
-                } else {
-                    setPermissionError(true);
-                    toast({
-                        title: "Access Denied",
-                        description: "You do not have permission to view this page.",
-                        variant: "destructive"
-                    });
-                }
-            } catch (error) {
-                 setPermissionError(true);
-                 setLoading(false);
+            if (!docSnap.exists() || docSnap.data().role !== 'faculty') {
+                setPermissionError(true);
+                toast({
+                    title: "Access Denied",
+                    description: "You do not have permission to view this page.",
+                    variant: "destructive"
+                });
+                setLoading(false);
+                return;
             }
-        };
 
-        fetchFacultyData();
-    }, [currentUser, toast]);
-    
-    // Effect to fetch students based on faculty's branches
-    useEffect(() => {
-        if (!currentUser || facultyBranches.length === 0) {
-            setLoading(false);
-            return;
-        }
+            const facultyBranches = docSnap.data().branch || [];
+            if (facultyBranches.length === 0) {
+                setStudents([]);
+                setLoading(false);
+                return;
+            }
 
-        const q = query(
-            collection(db, "users"),
-            where("status", "==", "pending"),
-            where("role", "==", "student"),
-            where("branch", "in", facultyBranches)
-        );
-
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const q = query(
+                collection(db, "users"),
+                where("status", "==", "pending"),
+                where("role", "==", "student"),
+                where("branch", "in", facultyBranches)
+            );
+            
+            const querySnapshot = await getDocs(q);
             const fetchedStudents: PendingStudent[] = [];
             querySnapshot.forEach((doc) => {
                 fetchedStudents.push({ id: doc.id, ...doc.data() } as PendingStudent);
             });
             setStudents(fetchedStudents);
-            setLoading(false);
-            setPermissionError(false);
-        }, (error) => {
+
+        } catch (error: any) {
             console.error("Error fetching students:", error);
             if (error.message.includes('permission-denied') || error.message.includes('Missing or insufficient permissions')) {
                 setPermissionError(true);
-                 toast({
+                toast({
                     title: "Permission Denied",
                     description: "You may not have permission to view pending students.",
                     variant: "destructive"
                 });
+            } else {
+                 toast({
+                    title: "Error",
+                    description: "Could not fetch students.",
+                    variant: "destructive"
+                });
             }
             setStudents([]);
+        } finally {
             setLoading(false);
-        });
+        }
+    }, [toast]);
 
-        return () => unsubscribe();
-    }, [currentUser, facultyBranches, toast]);
+
+    useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                setCurrentUser(user);
+                fetchStudents(user);
+            } else {
+                setCurrentUser(null);
+                setLoading(false);
+            }
+        });
+        return () => unsubscribeAuth();
+    }, [fetchStudents]);
 
     const handleApproval = async (id: string, newStatus: 'approved' | 'declined') => {
         const studentRef = doc(db, 'users', id);
@@ -115,6 +115,10 @@ export default function ApproveStudentsPage() {
                 title: `User ${newStatus}`,
                 description: `The student account has been successfully ${newStatus}.`,
             });
+            // Refetch students after approval
+            if(currentUser) {
+                fetchStudents(currentUser);
+            }
         } catch (error) {
             console.error("Error updating status: ", error);
             toast({ title: "Error", description: "Failed to update user status. You may not have permission.", variant: "destructive" });
