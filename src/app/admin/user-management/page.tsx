@@ -56,6 +56,13 @@ export default function UserManagementPage() {
             setLoading(false);
         }, (error) => {
             console.error("Error fetching users: ", error);
+            if (error.message.includes('permission-denied')) {
+                toast({
+                    title: "Permission Denied",
+                    description: "You do not have permission to view all users.",
+                    variant: "destructive"
+                });
+            }
             setLoading(false);
         });
 

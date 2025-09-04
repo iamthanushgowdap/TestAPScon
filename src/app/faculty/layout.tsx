@@ -36,6 +36,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 const navItems = [
   { href: '/faculty/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/faculty/approve-students', label: 'Approve Students', icon: UserCheck },
+  { href: '/faculty/student-management', label: 'Student Management', icon: Users },
   { href: '#', label: 'Assignments', icon: Upload },
   { href: '#', label: 'Attendance', icon: ClipboardCheck },
   { href: '#', label: 'Announcements', icon: Megaphone },
