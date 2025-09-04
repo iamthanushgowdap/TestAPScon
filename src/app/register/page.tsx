@@ -41,9 +41,17 @@ export default function RegisterPage() {
         const fetchedBranches: Branch[] = [];
         snapshot.forEach(doc => fetchedBranches.push({ id: doc.id, ...doc.data() } as Branch));
         setBranches(fetchedBranches);
+    }, (error) => {
+        console.error("Error fetching branches for registration: ", error);
+        toast({
+            title: "Could not load branches",
+            description: "You may not have permission to view branches. Please contact an admin if this issue persists.",
+            variant: "destructive"
+        });
+        setBranches([]);
     });
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,6 +161,7 @@ export default function RegisterPage() {
                                 <SelectValue placeholder="Branch" />
                             </SelectTrigger>
                             <SelectContent>
+                                {branches.length === 0 && <SelectItem value="none" disabled>No branches online</SelectItem>}
                                 {branches.map(branch => (
                                     <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
                                 ))}
