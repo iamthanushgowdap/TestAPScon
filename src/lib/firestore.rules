@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    function isAdmin() {
+      // User is an admin if their own user document has role 'admin'.
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isFaculty() {
+        // User is faculty if their own user document has role 'faculty'.
+        return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'faculty';
+    }
+
+    function isOwner(userId) {
+      // User is the owner of the document.
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function facultyCanAccessStudent(studentData) {
+        // Check if the student's branch is in the faculty's list of assigned branches.
+        let facultyData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+        return studentData.role == 'student' && (
+            (facultyData.branch is list && studentData.branch in facultyData.branch) ||
+            (facultyData.branch is string && studentData.branch == facultyData.branch)
+        );
+    }
+
+    match /users/{userId} {
+      // ANYONE can create a user document (i.e., register). Status is 'pending' by default.
+      allow create: if request.auth != null;
+
+      // - Users can read their own profile.
+      // - Admins can read any user profile.
+      // - Faculty can read profiles of students in their assigned branches.
+      allow get: if isOwner(userId) || isAdmin() || (isFaculty() && facultyCanAccessStudent(resource.data));
+                   
+      // - Admins can list all users.
+      // - Faculty can list students. The client-side query must filter by branch.
+      //   The `get` rule above will secure the individual document reads.
+      allow list: if isAdmin() || isFaculty();
+
+      // - Users can update their own profile.
+      // - Admins can update any user profile (for approval, role changes, etc.).
+      // - Faculty can update student profiles in their branch (for approval).
+      allow update: if isOwner(userId) || isAdmin() || (isFaculty() && facultyCanAccessStudent(request.resource.data));
+
+      // Only the owner or an admin can delete a user record.
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    match /branches/{branchId} {
+        // ANYONE can view the list of branches (e.g., for registration dropdowns).
+        allow read: if true;
+        // ONLY ADMINS can create, update, or delete branches.
+        allow write: if isAdmin();
+    }
+  }
+}
