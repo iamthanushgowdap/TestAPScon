@@ -32,6 +32,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import BottomNavigation from '@/components/bottom-navigation';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -147,9 +148,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </DropdownMenu>
             </div>
         </header>
-        <main className="flex-1 overflow-y-auto bg-background">
+        <main className="flex-1 overflow-y-auto bg-background pb-20 md:pb-0">
             {children}
         </main>
+        <footer className="fixed bottom-0 left-0 right-0 md:hidden bg-background/80 backdrop-blur-sm p-2 z-50 border-t">
+          <BottomNavigation />
+        </footer>
         </SidebarInset>
     </SidebarProvider>
   );
