@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Edit, Trash2, Network, PlusCircle, Search } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
-import { collection, onSnapshot, doc, deleteDoc, addDoc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, addDoc, updateDoc, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -54,9 +54,7 @@ export default function BranchManagementPage() {
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
-        // This query is designed to prevent permission errors.
-        // It fetches a single non-existent document instead of the whole list.
-        const q = query(collection(db, "branches"), where("id", "==", "non-existent-doc"));
+        const q = query(collection(db, "branches"));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const fetchedBranches: Branch[] = [];
             snapshot.forEach(doc => fetchedBranches.push({ id: doc.id, ...doc.data() } as Branch));
@@ -65,12 +63,6 @@ export default function BranchManagementPage() {
             setLoading(false);
         }, (error) => {
             console.error("Error fetching branches: ", error);
-            // This toast is now less likely to show, but kept for robustness.
-            toast({
-                title: "Error",
-                description: "Could not fetch branches. Please check your Firestore security rules.",
-                variant: "destructive"
-            });
             setLoading(false);
         });
 
@@ -185,7 +177,7 @@ export default function BranchManagementPage() {
                             {filteredBranches.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={3} className="text-center text-muted-foreground">
-                                        No branches found. Update Firestore rules to see data.
+                                        No branches found. You may not have permission to view them.
                                     </TableCell>
                                 </TableRow>
                             ) : (

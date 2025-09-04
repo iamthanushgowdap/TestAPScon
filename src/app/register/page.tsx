@@ -36,7 +36,6 @@ export default function RegisterPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
 
   useEffect(() => {
-    // This query is designed to prevent permission errors.
     const branchesQuery = query(collection(db, "branches"), where("status", "==", "online"));
     const unsubscribe = onSnapshot(branchesQuery, (snapshot) => {
         const fetchedBranches: Branch[] = [];
@@ -44,12 +43,6 @@ export default function RegisterPage() {
         setBranches(fetchedBranches);
     }, (error) => {
         console.error("Error fetching branches for registration: ", error);
-        // This toast is now less likely to show, but kept for robustness.
-        toast({
-            title: "Could not load branches",
-            description: "Please contact an admin if this issue persists.",
-            variant: "destructive"
-        });
         setBranches([]);
     });
     return () => unsubscribe();
@@ -163,7 +156,7 @@ export default function RegisterPage() {
                                 <SelectValue placeholder="Branch" />
                             </SelectTrigger>
                             <SelectContent>
-                                {branches.length === 0 && <SelectItem value="none" disabled>No branches online</SelectItem>}
+                                {branches.length === 0 && <SelectItem value="none" disabled>Loading branches...</SelectItem>}
                                 {branches.map(branch => (
                                     <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
                                 ))}

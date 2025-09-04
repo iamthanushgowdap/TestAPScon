@@ -63,7 +63,6 @@ export default function FacultyManagementPage() {
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
-        // This query is designed to prevent permission errors.
         const q = query(collection(db, "users"), where("role", "==", "faculty"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const fetchedFaculty: FacultyData[] = [];
@@ -75,29 +74,16 @@ export default function FacultyManagementPage() {
             setLoading(false);
         }, (error) => {
             console.error("Error fetching faculty: ", error);
-            // This toast is now less likely to show, but kept for robustness.
-            toast({
-                title: "Error",
-                description: "Could not fetch faculty. Please check your Firestore security rules.",
-                variant: "destructive"
-            });
             setLoading(false);
         });
 
-        // This query is also designed to prevent permission errors for branches.
-        const branchesQuery = query(collection(db, "branches"), where("id", "==", "non-existent-doc"));
+        const branchesQuery = query(collection(db, "branches"), where("status", "==", "online"));
         const branchesUnsubscribe = onSnapshot(branchesQuery, (snapshot) => {
             const fetchedBranches: Branch[] = [];
             snapshot.forEach(doc => fetchedBranches.push({ id: doc.id, ...doc.data() } as Branch));
             setBranches(fetchedBranches);
         }, (error) => {
             console.error("Error fetching branches for faculty form: ", error);
-            // This toast is now less likely to show.
-            toast({
-                title: "Error",
-                description: "Could not fetch branch list. Please check your Firestore security rules.",
-                variant: "destructive"
-            });
             setBranches([]);
         });
 
@@ -236,7 +222,7 @@ export default function FacultyManagementPage() {
                             {filteredFaculty.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center text-muted-foreground">
-                                        No faculty members found. Update Firestore rules to see data.
+                                        No faculty members found. You may not have permission to view them.
                                     </TableCell>
                                 </TableRow>
                             ) : (
