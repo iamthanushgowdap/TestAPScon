@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Users, Briefcase, Percent, Wallet, Shield, Database, Megaphone, Bot, ArrowRight } from "lucide-react";
 import { Bar, Pie, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, PieChart, Cell, BarChart } from "recharts";
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -42,52 +42,41 @@ export default function AdminDashboardPage() {
     const { toast } = useToast();
 
     useEffect(() => {
-        const usersRef = collection(db, 'users');
+        const usersQuery = query(collection(db, 'users'));
 
-        const handleError = (error: Error, type: string) => {
-            console.error(`Firestore error (${type}):`, error.message);
+        const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
+            let students = 0;
+            let faculty = 0;
+            snapshot.forEach(doc => {
+                const user = doc.data();
+                if (user.role === 'student') {
+                    students++;
+                } else if (user.role === 'faculty') {
+                    faculty++;
+                }
+            });
+            setStudentCount(students);
+            setFacultyCount(faculty);
+            setLoading(false);
+            setPermissionError(false); // Reset error on success
+        }, (error) => {
+            console.error(`Firestore error (users):`, error.message);
             if (error.message.includes('permission-denied')) {
                 if (!permissionError) { // Show toast only once
                      toast({
                         title: "Permission Denied",
-                        description: `Could not fetch ${type} data. Please check your Firestore security rules.`,
+                        description: `Could not fetch user data. Please check your Firestore security rules.`,
                         variant: "destructive"
                     });
                     setPermissionError(true);
                 }
             }
+            setStudentCount(0);
+            setFacultyCount(0);
             setLoading(false);
-        };
+        });
 
-        const studentQuery = query(usersRef, where('role', '==', 'student'));
-        const facultyQuery = query(usersRef, where('role', '==', 'faculty'));
-
-        const studentUnsubscribe = onSnapshot(studentQuery, 
-            (snapshot) => {
-                setStudentCount(snapshot.size);
-                setLoading(false);
-            }, 
-            (error) => {
-                handleError(error, 'students');
-                setStudentCount(0);
-            }
-        );
-
-        const facultyUnsubscribe = onSnapshot(facultyQuery, 
-            (snapshot) => {
-                setFacultyCount(snapshot.size);
-                setLoading(false);
-            }, 
-            (error) => {
-                handleError(error, 'faculty');
-                setFacultyCount(0);
-            }
-        );
-
-        return () => {
-            studentUnsubscribe();
-            facultyUnsubscribe();
-        };
+        return () => unsubscribe();
     }, [toast, permissionError]);
     
     const quickStats = [
