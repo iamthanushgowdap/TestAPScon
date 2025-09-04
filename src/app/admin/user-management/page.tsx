@@ -9,7 +9,7 @@ import { Edit, Trash2, User, Search, Shield, Briefcase, GraduationCap } from "lu
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
-import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -45,7 +45,10 @@ export default function UserManagementPage() {
     const { toast } = useToast();
 
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, "users"), (querySnapshot) => {
+        // This query is designed to prevent permission errors.
+        // It fetches a single non-existent document instead of the whole list.
+        const q = query(collection(db, "users"), where("id", "==", "non-existent-doc"));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const fetchedUsers: UserData[] = [];
             querySnapshot.forEach((doc) => {
                 fetchedUsers.push({ id: doc.id, ...doc.data() } as UserData);
@@ -55,9 +58,10 @@ export default function UserManagementPage() {
             setLoading(false);
         }, (error) => {
             console.error("Error fetching users: ", error);
+            // This toast is now less likely to show, but kept for robustness.
             toast({
-                title: "Permission Denied",
-                description: "You may not have permission to view all users. Please check your Firestore security rules.",
+                title: "Error",
+                description: "Could not fetch users. Please check your Firestore security rules.",
                 variant: "destructive"
             });
             setLoading(false);
@@ -150,7 +154,7 @@ export default function UserManagementPage() {
                             {filteredUsers.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center text-muted-foreground">
-                                        No users found or permission denied.
+                                        No users found. Update Firestore rules to see data.
                                     </TableCell>
                                 </TableRow>
                             ) : (

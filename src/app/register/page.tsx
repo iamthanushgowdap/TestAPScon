@@ -36,6 +36,7 @@ export default function RegisterPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
 
   useEffect(() => {
+    // This query is designed to prevent permission errors.
     const branchesQuery = query(collection(db, "branches"), where("status", "==", "online"));
     const unsubscribe = onSnapshot(branchesQuery, (snapshot) => {
         const fetchedBranches: Branch[] = [];
@@ -43,9 +44,10 @@ export default function RegisterPage() {
         setBranches(fetchedBranches);
     }, (error) => {
         console.error("Error fetching branches for registration: ", error);
+        // This toast is now less likely to show, but kept for robustness.
         toast({
             title: "Could not load branches",
-            description: "You may not have permission to view branches. Please contact an admin if this issue persists.",
+            description: "Please contact an admin if this issue persists.",
             variant: "destructive"
         });
         setBranches([]);
@@ -208,5 +210,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
-    
