@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GraduationCap, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -12,8 +12,14 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, query, where } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+interface Branch {
+    id: string;
+    name: string;
+}
 
 export default function RegisterPage() {
   const { toast } = useToast();
@@ -23,9 +29,36 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [usnYear, setUsnYear] = useState('');
-  const [usnBranch, setUsnBranch] = useState('');
   const [usnRoll, setUsnRoll] = useState('');
+  const [selectedBranch, setSelectedBranch] = useState('');
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingBranches, setLoadingBranches] = useState(true);
+
+  useEffect(() => {
+    const fetchBranches = async () => {
+        try {
+            const q = query(collection(db, "branches"), where("status", "==", "online"));
+            const querySnapshot = await getDocs(q);
+            const fetchedBranches: Branch[] = [];
+            querySnapshot.forEach(doc => {
+                fetchedBranches.push({ id: doc.id, name: doc.data().name } as Branch);
+            });
+            setBranches(fetchedBranches);
+        } catch (error) {
+            console.error("Error fetching branches: ", error);
+            toast({
+                title: "Error",
+                description: "Could not load branches. Please try again later.",
+                variant: "destructive"
+            });
+        } finally {
+            setLoadingBranches(false);
+        }
+    };
+    fetchBranches();
+  }, [toast]);
+
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,13 +70,13 @@ export default function RegisterPage() {
         });
         return;
     }
-     if (!usnBranch) {
-        toast({ title: 'Error', description: 'Please enter a branch code.', variant: 'destructive' });
+     if (!selectedBranch) {
+        toast({ title: 'Error', description: 'Please select a branch.', variant: 'destructive' });
         return;
     }
     setLoading(true);
 
-    const usn = `1AP${usnYear}${usnBranch.toUpperCase()}${usnRoll}`;
+    const usn = `1AP${usnYear}${selectedBranch.toUpperCase()}${usnRoll}`;
     const userEmail = email.toLowerCase();
 
     try {
@@ -63,7 +96,7 @@ export default function RegisterPage() {
         usn: usn,
         role: 'student',
         status: 'pending',
-        branch: usnBranch.toUpperCase(),
+        branch: selectedBranch.toUpperCase(),
         year: `20${usnYear}`,
         createdAt: new Date(),
       });
@@ -130,16 +163,7 @@ export default function RegisterPage() {
                             onChange={(e) => setUsnYear(e.target.value.replace(/[^0-9]/g, ''))}
                             className="w-16 text-center"
                         />
-                        <Input 
-                            id="usn-branch"
-                            type="text"
-                            placeholder="CS"
-                            maxLength={3}
-                            required
-                            value={usnBranch}
-                            onChange={(e) => setUsnBranch(e.target.value.replace(/[^a-zA-Z]/g, ''))}
-                            className="w-20 text-center"
-                        />
+                         <span className="p-2 rounded-md bg-muted text-muted-foreground font-mono">{selectedBranch || '...'}</span>
                         <Input 
                             id="usn-roll" 
                             type="text" 
@@ -152,6 +176,19 @@ export default function RegisterPage() {
                         />
                     </div>
                 </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="branch">Branch</Label>
+                    <Select onValueChange={setSelectedBranch} value={selectedBranch}>
+                        <SelectTrigger id="branch" disabled={loadingBranches}>
+                            <SelectValue placeholder={loadingBranches ? "Loading branches..." : "Select your branch"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {branches.map(branch => (
+                                <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <Input id="password" type="password" placeholder="••••••••" required value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -161,7 +198,7 @@ export default function RegisterPage() {
                     <Input id="confirm-password" type="password" placeholder="••••••••" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                 </div>
 
-                <Button type="submit" className="w-full mt-4" disabled={loading}>
+                <Button type="submit" className="w-full mt-4" disabled={loading || loadingBranches}>
                     {loading ? 'Registering...' : 'Register'}
                     <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
