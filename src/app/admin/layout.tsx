@@ -39,7 +39,7 @@ import '@/styles/admin-bottom-navigation.css';
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/approve', label: 'Approve Users', icon: UserCheck },
-  { href: '#', label: 'User Management', icon: Users },
+  { href: '/admin/user-management', label: 'User Management', icon: Users },
   { href: '#', label: 'Security', icon: Shield },
   { href: '#', label: 'Database', icon: Database },
   { href: '#', label: 'Analytics', icon: BarChart },
