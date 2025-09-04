@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Edit, Trash2, Search, Briefcase, PlusCircle, ChevronsUpDown, Check } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
-import { collection, onSnapshot, doc, deleteDoc, query, where, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, query, where, addDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -97,6 +97,13 @@ export default function FacultyManagementPage() {
             setBranches(fetchedBranches);
         }, (error) => {
             console.error("Error fetching branches for faculty form: ", error);
+            if(error.message.includes('permission-denied')) {
+                 toast({
+                    title: "Permission Denied",
+                    description: `Could not fetch branches. Check your security rules.`,
+                    variant: "destructive"
+                });
+            }
             setBranches([]);
         });
 
@@ -423,4 +430,4 @@ export default function FacultyManagementPage() {
         </div>
     );
 
-    
+}
