@@ -87,6 +87,14 @@ export default function FacultyManagementPage() {
             const fetchedBranches: Branch[] = [];
             snapshot.forEach(doc => fetchedBranches.push({ id: doc.id, ...doc.data() } as Branch));
             setBranches(fetchedBranches);
+        }, (error) => {
+            console.error("Error fetching branches for faculty form: ", error);
+            toast({
+                title: "Permission Denied",
+                description: "Could not fetch branch list for the form. Please check your Firestore security rules.",
+                variant: "destructive"
+            });
+            setBranches([]);
         });
 
         return () => {
@@ -343,5 +351,3 @@ export default function FacultyManagementPage() {
         </div>
     );
 }
-
-    
