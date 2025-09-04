@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Edit, Trash2, Search, Briefcase, PlusCircle, User } from "lucide-react";
+import { Edit, Trash2, Search, Briefcase, PlusCircle } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { collection, onSnapshot, doc, deleteDoc, query, where, addDoc, updateDoc } from 'firebase/firestore';
@@ -29,14 +29,19 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+type UserRole = 'student' | 'faculty' | 'admin';
 
 interface FacultyData {
     id: string;
     name?: string;
     email: string;
+    phone?: string;
+    branch?: string;
+    role?: UserRole;
 }
 
 export default function FacultyManagementPage() {
@@ -101,7 +106,7 @@ export default function FacultyManagementPage() {
     
     const openAddDialog = () => {
         setIsEditMode(false);
-        setCurrentFaculty({});
+        setCurrentFaculty({ role: 'faculty' });
         setIsDialogOpen(true);
     };
 
@@ -118,18 +123,24 @@ export default function FacultyManagementPage() {
         }
         setIsSaving(true);
         try {
+            const dataToSave = {
+                name: currentFaculty.name,
+                email: currentFaculty.email,
+                phone: currentFaculty.phone || '',
+                branch: currentFaculty.branch || '',
+                role: currentFaculty.role || 'faculty',
+            };
+
             if (isEditMode) {
                 // Update existing faculty
                 const docRef = doc(db, 'users', currentFaculty.id!);
-                await updateDoc(docRef, { name: currentFaculty.name });
-                 toast({ title: "Success", description: "Faculty member updated." });
+                await updateDoc(docRef, dataToSave);
+                toast({ title: "Success", description: "Faculty member updated." });
             } else {
                 // Add new faculty - NOTE: This only creates the Firestore record.
                 // A full solution requires creating an auth user, which is a backend operation.
                 await addDoc(collection(db, "users"), {
-                    name: currentFaculty.name,
-                    email: currentFaculty.email,
-                    role: 'faculty',
+                    ...dataToSave,
                     status: 'approved',
                     createdAt: new Date(),
                 });
@@ -237,7 +248,7 @@ export default function FacultyManagementPage() {
                 </CardContent>
             </Card>
 
-             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                         <DialogTitle>{isEditMode ? 'Edit Faculty' : 'Add New Faculty'}</DialogTitle>
@@ -264,6 +275,43 @@ export default function FacultyManagementPage() {
                                 className="col-span-3"
                                 readOnly={isEditMode}
                             />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="phone" className="text-right">Phone</Label>
+                            <Input 
+                                id="phone" 
+                                type="tel"
+                                placeholder="+91 98765 43210"
+                                value={currentFaculty.phone || ''} 
+                                onChange={(e) => setCurrentFaculty({...currentFaculty, phone: e.target.value })}
+                                className="col-span-3"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="branch" className="text-right">Branch</Label>
+                            <Input 
+                                id="branch" 
+                                placeholder="e.g., Computer Science"
+                                value={currentFaculty.branch || ''} 
+                                onChange={(e) => setCurrentFaculty({...currentFaculty, branch: e.target.value })}
+                                className="col-span-3"
+                            />
+                        </div>
+                         <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="role" className="text-right">Role</Label>
+                             <Select
+                                value={currentFaculty.role}
+                                onValueChange={(value) => setCurrentFaculty({...currentFaculty, role: value as UserRole})}
+                            >
+                                <SelectTrigger className="col-span-3">
+                                    <SelectValue placeholder="Select a role" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="faculty">Faculty</SelectItem>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="student">Student</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                     <DialogFooter>
