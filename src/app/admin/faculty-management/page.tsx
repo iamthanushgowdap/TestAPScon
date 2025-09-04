@@ -33,9 +33,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Branch {
     id: string;
@@ -374,8 +374,8 @@ export default function FacultyManagementPage() {
                                 className="col-span-3"
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">Branch(es)</Label>
+                        <div className="grid grid-cols-4 items-start gap-4">
+                            <Label className="text-right pt-2">Branch(es)</Label>
                             <Popover open={openBranchPopover} onOpenChange={setOpenBranchPopover}>
                                 <PopoverTrigger asChild>
                                     <Button
@@ -391,41 +391,37 @@ export default function FacultyManagementPage() {
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="p-0">
-                                    <Command>
-                                    <CommandInput placeholder="Search branch..." />
-                                    <CommandList>
-                                        <CommandEmpty>No branch found.</CommandEmpty>
-                                        <CommandGroup>
-                                        {branches.map((branch) => (
-                                            <CommandItem
-                                                key={branch.id}
-                                                value={branch.name}
-                                                onSelect={(currentValue) => {
-                                                    const selectedBranches = currentFaculty.branch || [];
-                                                    const isSelected = selectedBranches.includes(branch.name);
-                                                    if (isSelected) {
-                                                        setCurrentFaculty({ ...currentFaculty, branch: selectedBranches.filter(b => b !== branch.name) });
-                                                    } else {
-                                                        setCurrentFaculty({ ...currentFaculty, branch: [...selectedBranches, branch.name] });
-                                                    }
-                                                }}
-                                            >
-                                            <div
-                                                className={cn(
-                                                    "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                                    currentFaculty.branch?.includes(branch.name)
-                                                    ? "bg-primary text-primary-foreground"
-                                                    : "opacity-50 [&_svg]:invisible"
-                                                )}
-                                            >
-                                                <Check className={cn("h-4 w-4")} />
-                                            </div>
-                                            {branch.name}
-                                            </CommandItem>
-                                        ))}
-                                        </CommandGroup>
-                                    </CommandList>
-                                    </Command>
+                                    <div className="space-y-2 p-2">
+                                         {branches.length === 0 ? (
+                                            <p className="text-center text-sm text-muted-foreground py-2">No branches found.</p>
+                                         ) : (
+                                            branches.map((branch) => {
+                                                const isSelected = currentFaculty.branch?.includes(branch.name) ?? false;
+                                                return (
+                                                    <div 
+                                                        key={branch.id} 
+                                                        className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent cursor-pointer"
+                                                        onClick={() => {
+                                                            const selectedBranches = currentFaculty.branch || [];
+                                                            if (isSelected) {
+                                                                setCurrentFaculty({ ...currentFaculty, branch: selectedBranches.filter(b => b !== branch.name) });
+                                                            } else {
+                                                                setCurrentFaculty({ ...currentFaculty, branch: [...selectedBranches, branch.name] });
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Checkbox
+                                                            id={`branch-${branch.id}`}
+                                                            checked={isSelected}
+                                                        />
+                                                        <Label htmlFor={`branch-${branch.id}`} className="font-normal cursor-pointer flex-1">
+                                                            {branch.name}
+                                                        </Label>
+                                                    </div>
+                                                );
+                                            })
+                                         )}
+                                    </div>
                                 </PopoverContent>
                             </Popover>
                         </div>
