@@ -6,15 +6,23 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { User, Briefcase, BookCopy, Users, KeyRound, Bell, Bot, Edit, Save } from "lucide-react";
+import { User, Briefcase, BookCopy, KeyRound, Bot, Edit, Save } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface FacultyData {
     name: string;
@@ -29,6 +37,13 @@ export default function FacultyProfile() {
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
+    
+    // State for password change dialog
+    const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmNewPassword, setConfirmNewPassword] = useState('');
+    const [isPasswordChanging, setIsPasswordChanging] = useState(false);
 
     useEffect(() => {
        const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -82,6 +97,40 @@ export default function FacultyProfile() {
             });
         } finally {
             setIsSaving(false);
+        }
+    };
+    
+    const handleChangePassword = async () => {
+        if (newPassword !== confirmNewPassword) {
+            toast({ title: "Error", description: "New passwords do not match.", variant: "destructive" });
+            return;
+        }
+        if (newPassword.length < 6) {
+            toast({ title: "Error", description: "Password must be at least 6 characters.", variant: "destructive" });
+            return;
+        }
+
+        setIsPasswordChanging(true);
+        const user = auth.currentUser;
+        if (!user || !user.email) {
+            toast({ title: "Error", description: "User not found.", variant: "destructive" });
+            setIsPasswordChanging(false);
+            return;
+        }
+
+        try {
+            const credential = EmailAuthProvider.credential(user.email, currentPassword);
+            await reauthenticateWithCredential(user, credential);
+            await updatePassword(user, newPassword);
+            toast({ title: "Success", description: "Password updated successfully." });
+            setIsPasswordDialogOpen(false);
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmNewPassword('');
+        } catch (error: any) {
+             toast({ title: "Error changing password", description: error.message, variant: "destructive" });
+        } finally {
+            setIsPasswordChanging(false);
         }
     };
 
@@ -190,23 +239,39 @@ export default function FacultyProfile() {
                             <CardTitle className="flex items-center gap-2"><KeyRound /> Security</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <Button variant="secondary">Change Password</Button>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="glassmorphism">
-                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Bell /> Notifications</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between p-2 rounded-md hover:bg-accent/50">
-                                <Label htmlFor="assignment-notifs" className="flex-1 cursor-pointer">Assignment Submissions</Label>
-                                <Switch id="assignment-notifs" defaultChecked />
-                            </div>
-                             <div className="flex items-center justify-between p-2 rounded-md hover:bg-accent/50">
-                                <Label htmlFor="announcement-notifs" className="flex-1 cursor-pointer">My Announcements</Label>
-                                <Switch id="announcement-notifs" defaultChecked />
-                            </div>
+                            <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="secondary">Change Password</Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-[425px]">
+                                    <DialogHeader>
+                                    <DialogTitle>Change Your Password</DialogTitle>
+                                    <DialogDescription>
+                                        Enter your current password and a new password below.
+                                    </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="grid gap-4 py-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="current-password">Current Password</Label>
+                                            <Input id="current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                                        </div>
+                                         <div className="space-y-2">
+                                            <Label htmlFor="new-password">New Password</Label>
+                                            <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                                        </div>
+                                         <div className="space-y-2">
+                                            <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+                                            <Input id="confirm-new-password" type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
+                                        <Button onClick={handleChangePassword} disabled={isPasswordChanging}>
+                                            {isPasswordChanging ? 'Changing...' : 'Change Password'}
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                         </CardContent>
                     </Card>
                 </div>

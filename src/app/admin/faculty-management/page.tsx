@@ -83,7 +83,7 @@ export default function FacultyManagementPage() {
             if(error.message.includes('permission-denied')) {
                  toast({
                     title: "Permission Denied",
-                    description: `Could not fetch faculty data. Please check your Firestore security rules.`,
+                    description: `Could not fetch faculty data.`,
                     variant: "destructive"
                 });
             }
@@ -100,7 +100,7 @@ export default function FacultyManagementPage() {
             if(error.message.includes('permission-denied')) {
                  toast({
                     title: "Permission Denied",
-                    description: `Could not fetch branches. Check your security rules.`,
+                    description: `Could not fetch branches.`,
                     variant: "destructive"
                 });
             }
@@ -408,12 +408,16 @@ export default function FacultyManagementPage() {
                                                     setCurrentFaculty({ ...currentFaculty, branch: newBranches });
                                                 }}
                                             >
-                                            <Check
+                                            <div
                                                 className={cn(
-                                                    "mr-2 h-4 w-4",
-                                                    currentFaculty.branch?.includes(branch.name) ? "opacity-100" : "opacity-0"
+                                                    "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                                    currentFaculty.branch?.includes(branch.name)
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "opacity-50 [&_svg]:invisible"
                                                 )}
-                                            />
+                                            >
+                                                <Check className={cn("h-4 w-4")} />
+                                            </div>
                                             {branch.name}
                                             </CommandItem>
                                         ))}
@@ -441,7 +445,4 @@ export default function FacultyManagementPage() {
             </Dialog>
         </div>
     );
-
 }
-
-    
