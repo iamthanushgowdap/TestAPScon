@@ -188,7 +188,7 @@ export default function ApproveStudentsPage() {
                                         </div>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )))}
                         </TableBody>
                     </Table>
                     )}
