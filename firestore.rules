@@ -2,9 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
   
-    // =================================
-    // Helper Functions
-    // =================================
     function isAdmin() {
       // Checks if the requesting user has the 'admin' role in their own user document.
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
@@ -15,35 +12,32 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // =================================
-    // User Collection Rules
-    // =================================
+    // --- Rules for Users ---
     match /users/{userId} {
-      // Any authenticated user can create their own user document during registration.
+      // Any user can create their own user document during registration.
       allow create: if request.auth != null;
 
-      // Users can read their own profile. Admins can read any individual profile.
+      // Users can read their own profile. Admins can read any profile.
       allow get: if isOwner(userId) || isAdmin();
       
-      // Admins can list all users for the dashboard and management pages.
+      // Admins can list all users for management pages.
       allow list: if isAdmin();
                    
       // Users can update their own profile. Admins can update any profile.
       allow update: if isOwner(userId) || isAdmin();
 
-      // Admins can delete users. Owners can also delete their own account.
-      allow delete: if isAdmin() || isOwner(userId);
+      // Only the owner or an admin can delete a user account.
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
-    // =================================
-    // Branch Collection Rules
-    // =================================
+    // --- Rules for Branches ---
     match /branches/{branchId} {
-        // Any authenticated user can view the list of branches for registration/forms.
-        allow get, list: if request.auth != null;
-
-        // Only administrators can create, update, or delete branches.
-        allow create, update, delete: if isAdmin();
+      // Allow public read access for branches, as this is needed for the registration page dropdown.
+      // This is safe as branch names are not sensitive data.
+      allow read: if true;
+      
+      // Only admins can create, update, or delete branches.
+      allow write: if isAdmin();
     }
   }
 }
