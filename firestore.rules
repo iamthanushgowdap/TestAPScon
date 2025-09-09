@@ -1,55 +1,44 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isStudent() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
+    }
+
     function isAdmin() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    function isFaculty() {
-        return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'faculty';
-    }
-
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
-    }
-
-    // Function to check if a student belongs to any of the faculty's branches.
-    function isStudentInFacultyBranch(studentData) {
-      let facultyData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      // This part is tricky in rules. We ensure the client query is pre-filtered,
-      // and here we just verify the student has a role and a branch.
-      // The `get` rule will do the final check.
-      return studentData.role == 'student' && studentData.branch in facultyData.branch;
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
-    match /users/{userId} {
-      // ANYONE can create a user document (i.e., register).
-      allow create: if request.auth != null;
-
-      // Users can read their own profile.
-      // Admins can read any user profile.
-      // Faculty can read profiles of students in their assigned branches.
-      allow get: if isOwner(userId) || isAdmin() || (isFaculty() && isStudentInFacultyBranch(resource.data));
-                   
-      // Admins and Faculty can list users. The actual documents returned
-      // are still protected by the 'get' rule.
-      allow list: if isAdmin() || isFaculty();
-
-      // Users can update their own profile.
-      // Admins can update any user profile.
-      // Faculty can update students in their branch (for approval).
-      allow update: if isOwner(userId) || isAdmin() || (isFaculty() && isStudentInFacultyBranch(request.resource.data));
-
-      // Only an admin can delete a user record.
-      allow delete: if isAdmin();
+    function isFaculty() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'faculty';
+    }
+    
+    function isApproved() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
     }
 
+    match /users/{userId} {
+      allow create: if isSignedIn();
+      allow get: if isSignedIn();
+      allow update: if isSignedIn() && request.auth.uid == userId || isAdmin();
+      allow delete: if isAdmin();
+      allow list: if isAdmin() || isFaculty();
+    }
+    
     match /branches/{branchId} {
-        // ANYONE can view the list of branches (e.g., for registration dropdowns).
-        allow read: if true;
-        // ONLY ADMINS can create, update, or delete branches.
+        allow read: if isSignedIn();
         allow write: if isAdmin();
+    }
+    
+    match /timetables/{timetableId} {
+      allow read: if (isStudent() && isApproved() && resource.data.branch == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch && resource.data.semester == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.semester) || isFaculty() || isAdmin();
+      allow write: if isFaculty() || isAdmin();
     }
   }
 }
