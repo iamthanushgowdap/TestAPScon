@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { collection, doc, getDocs, setDoc, query, where } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, query, where, writeBatch } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -83,35 +83,26 @@ export default function RegisterPage() {
     const userEmail = email.toLowerCase();
 
     try {
-        // Step 1: Check if email or USN already exists in Firestore
         const emailQuery = query(collection(db, 'users'), where('email', '==', userEmail));
         const usnQuery = query(collection(db, 'users'), where('usn', '==', usn));
-        
+
         const emailQuerySnapshot = await getDocs(emailQuery);
         if (!emailQuerySnapshot.empty) {
-            toast({ title: 'Registration Failed', description: 'This email address is already registered.', variant: 'destructive' });
-            setLoading(false);
-            return;
+            throw new Error("This email address is already registered.");
         }
 
         const usnQuerySnapshot = await getDocs(usnQuery);
         if (!usnQuerySnapshot.empty) {
-            toast({ title: 'Registration Failed', description: 'This USN is already registered.', variant: 'destructive' });
-            setLoading(false);
-            return;
+            throw new Error("This USN is already registered.");
         }
 
-
-      // Step 2: Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, userEmail, password);
       const user = userCredential.user;
       
-      // Step 2.5: Update Firebase Auth profile with display name
       await updateProfile(user, {
         displayName: name,
       });
 
-      // Step 3: Create a corresponding user document in Firestore
       await setDoc(doc(db, 'users', user.uid), {
         name: name,
         email: userEmail,
@@ -130,18 +121,15 @@ export default function RegisterPage() {
       });
       router.push('/login');
     } catch (error: any) {
-        const errorCode = error.code;
         let errorMessage = error.message;
-        // This is a fallback for the race condition where auth creation fails after the DB check passed
-        if (errorCode === 'auth/email-already-in-use') {
-            errorMessage = 'This email address is already registered. Please login instead.';
+        if (error.code === 'auth/email-already-in-use') {
+            errorMessage = 'This email address is already registered.';
         }
         toast({
             title: 'Registration Failed',
             description: errorMessage,
             variant: 'destructive',
         });
-        console.error(`${errorCode}: ${errorMessage}`);
     } finally {
         setLoading(false);
     }
@@ -260,5 +248,4 @@ export default function RegisterPage() {
     </div>
   );
 }
-
     
