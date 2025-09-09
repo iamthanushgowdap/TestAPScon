@@ -6,7 +6,7 @@ import AppLayout from "@/components/app-layout";
 import { ProactiveReminderCard } from "@/components/proactive-reminder-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Bot, BookCopy, ListTodo, Calendar, Clock, FileText, Wallet, Percent, PartyPopper } from "lucide-react";
+import { ArrowRight, Bot, BookCopy, ListTodo, Calendar, Clock, FileText, Wallet, Percent, PartyPopper, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -18,6 +18,7 @@ interface ScheduleItem {
     time: string;
     subject: string;
     location: string;
+    faculty: string;
     startTime?: string;
 }
 
@@ -132,17 +133,18 @@ export default function DashboardPage() {
                                 <CardContent className="space-y-4">
                                     {loadingSchedule ? (
                                         <>
-                                            <Skeleton className="h-12 w-full" />
-                                            <Skeleton className="h-12 w-full" />
-                                            <Skeleton className="h-12 w-full" />
+                                            <Skeleton className="h-16 w-full" />
+                                            <Skeleton className="h-16 w-full" />
+                                            <Skeleton className="h-16 w-full" />
                                         </>
                                     ) : todaysSchedule.length > 0 ? (
                                         todaysSchedule.map(item => (
-                                            <div key={item.time} className="flex items-center">
-                                                <Clock className="h-4 w-4 mr-3 text-muted-foreground" />
+                                            <div key={item.time} className="flex items-start">
+                                                <Clock className="h-4 w-4 mr-3 mt-1 text-muted-foreground" />
                                                 <div>
                                                     <p className="font-semibold">{item.subject}</p>
                                                     <p className="text-sm text-muted-foreground">{item.time} - {item.location}</p>
+                                                    <p className="text-sm text-muted-foreground flex items-center gap-1.5"><UserIcon className="h-3 w-3" />{item.faculty}</p>
                                                 </div>
                                             </div>
                                         ))
