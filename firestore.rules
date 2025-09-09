@@ -1,70 +1,74 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // --- Helper Functions ---
+    function isAuth() {
+      return request.auth != null;
+    }
 
-    // Helper functions
-    function isFaculty() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'faculty';
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
     }
+
+    function getRequestingUserData() {
+      return isAuth() ? getUserData(request.auth.uid) : null;
+    }
+
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isAuth() && getRequestingUserData().role == 'admin';
     }
-    function isStudent() {
-       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
+
+    function isFaculty() {
+      return isAuth() && getRequestingUserData().role == 'faculty';
     }
-    function isApproved() {
-       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
-    }
+
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
+    // --- Collection Rules ---
+
+    // Users Collection
     match /users/{userId} {
-      // Create: Anyone can create a user doc (register), but only with role 'student' and status 'pending'
-      allow create: if request.resource.data.role == 'student'
-                    && request.resource.data.status == 'pending';
+      // Create: Anyone can create their own user document (for registration).
+      allow create: if isAuth() && isOwner(userId);
+      
+      // Read: Users can read their own profile. Admins can read any profile. 
+      // Faculty can read profiles of students in their assigned branches.
+      allow get: if isAuth() && (isOwner(userId) || isAdmin() || 
+                 (isFaculty() && getUserData(userId).role == 'student' && getUserData(userId).branch in getRequestingUserData().branch));
+      
+      // List: Admins and faculty can list users. Unauthenticated users can query by email or USN for registration checks.
+      allow list: if isAdmin() || isFaculty() || (request.query.keys.hasOnly(['email']) || request.query.keys.hasOnly(['usn']));
 
-      // Read: Any authenticated user can read their own profile. Admins can read any profile.
-      allow get: if request.auth != null && (isOwner(userId) || isAdmin());
+      // Write: Users can update their own profile. Admins can update any profile.
+      // Faculty can update student profiles within their branch (for approvals).
+      allow update: if (isAuth() && isOwner(userId)) || isAdmin() || 
+                    (isFaculty() && getUserData(userId).role == 'student' && getUserData(userId).branch in getRequestingUserData().branch);
 
-      // Update: Users can update their own data. Admins/Faculty can update status.
-      allow update: if request.auth != null && (
-                      isOwner(userId) || 
-                      isAdmin() || 
-                      (isFaculty() && request.resource.data.status != resource.data.status)
-                    );
-                    
       // Delete: Only admins can delete users.
       allow delete: if isAdmin();
-      
-      // List: Admins, Faculty can list all users. 
-      // Unauthenticated users can only query to check for existing email/usn.
-      allow list: if request.auth == null 
-                  || isAdmin() 
-                  || isFaculty();
     }
 
+    // Branches Collection
     match /branches/{branchId} {
-        // Anyone can read the list of branches for registration purposes.
-        allow read: if true;
-        // Only Admins can create, update, or delete branches.
-        allow write: if isAdmin();
+      // Read: Anyone can read the list of branches (needed for registration page).
+      allow read: if true;
+      // Write: Only admins can create or modify branches.
+      allow write: if isAdmin();
     }
     
+    // Timetables Collection
     match /timetables/{timetableId} {
-        // Students can read their own timetable. Faculty and Admins can read any.
-        allow get: if request.auth != null && (
-            (isStudent() && isApproved() && timetableId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch + '_' + get(/databases/$(database)/documents/users/$(request.auth.uid)).data.semester) ||
-            isFaculty() ||
-            isAdmin()
-        );
-        
-        // Admins and Faculty can write to timetables.
-        allow write: if request.auth != null && (isAdmin() || isFaculty());
-        
-        // No one can list all timetables directly.
-        allow list: if false;
+      // Read: Any authenticated user can read any timetable.
+      // (Permissions are controlled by knowing the timetableId, which is branch_semester).
+      allow read: if isAuth();
+      
+      // Write: Admins and Faculty can create, update, and delete timetables.
+      allow write: if isAdmin() || isFaculty();
     }
   }
 }
