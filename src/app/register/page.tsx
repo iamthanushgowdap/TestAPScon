@@ -66,15 +66,11 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-        toast({
-            title: 'Error',
-            description: 'Passwords do not match.',
-            variant: 'destructive',
-        });
+        toast({ title: 'Error', description: 'Passwords do not match.', variant: 'destructive' });
         return;
     }
-     if (!selectedBranch) {
-        toast({ title: 'Error', description: 'Please select a branch.', variant: 'destructive' });
+     if (!selectedBranch || !usnYear || !usnRoll) {
+        toast({ title: 'Error', description: 'Please fill out all USN fields and select a branch.', variant: 'destructive' });
         return;
     }
     if (!selectedSemester) {
@@ -83,20 +79,39 @@ export default function RegisterPage() {
     }
     setLoading(true);
 
-    const usn = `1AP${usnYear}${selectedBranch.toUpperCase()}${usnRoll}`;
+    const usn = `1AP${usnYear}${selectedBranch.substring(0,2).toUpperCase()}${usnRoll}`;
     const userEmail = email.toLowerCase();
 
     try {
-      // Step 1: Create user in Firebase Authentication
+        // Step 1: Check if email or USN already exists in Firestore
+        const emailQuery = query(collection(db, 'users'), where('email', '==', userEmail));
+        const usnQuery = query(collection(db, 'users'), where('usn', '==', usn));
+        
+        const emailQuerySnapshot = await getDocs(emailQuery);
+        if (!emailQuerySnapshot.empty) {
+            toast({ title: 'Registration Failed', description: 'This email address is already registered.', variant: 'destructive' });
+            setLoading(false);
+            return;
+        }
+
+        const usnQuerySnapshot = await getDocs(usnQuery);
+        if (!usnQuerySnapshot.empty) {
+            toast({ title: 'Registration Failed', description: 'This USN is already registered.', variant: 'destructive' });
+            setLoading(false);
+            return;
+        }
+
+
+      // Step 2: Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, userEmail, password);
       const user = userCredential.user;
       
-      // Step 1.5: Update Firebase Auth profile with display name
+      // Step 2.5: Update Firebase Auth profile with display name
       await updateProfile(user, {
         displayName: name,
       });
 
-      // Step 2: Create a corresponding user document in Firestore with the user's UID as the document ID
+      // Step 3: Create a corresponding user document in Firestore
       await setDoc(doc(db, 'users', user.uid), {
         name: name,
         email: userEmail,
@@ -117,6 +132,7 @@ export default function RegisterPage() {
     } catch (error: any) {
         const errorCode = error.code;
         let errorMessage = error.message;
+        // This is a fallback for the race condition where auth creation fails after the DB check passed
         if (errorCode === 'auth/email-already-in-use') {
             errorMessage = 'This email address is already registered. Please login instead.';
         }
@@ -172,7 +188,7 @@ export default function RegisterPage() {
                             onChange={(e) => setUsnYear(e.target.value.replace(/[^0-9]/g, ''))}
                             className="w-16 text-center"
                         />
-                         <span className="p-2 rounded-md bg-muted text-muted-foreground font-mono text-sm">{selectedBranch.substring(0,2) || '..'}</span>
+                         <span className="p-2 rounded-md bg-muted text-muted-foreground font-mono text-sm">{selectedBranch.substring(0,2).toUpperCase() || '..'}</span>
                         <Input 
                             id="usn-roll" 
                             type="text" 
@@ -244,3 +260,5 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+    
