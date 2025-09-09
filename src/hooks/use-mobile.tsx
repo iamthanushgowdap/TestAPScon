@@ -12,7 +12,7 @@ export function useIsMobile() {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
 
-    // Initial check after the component has mounted
+    // Run the check once after the component has mounted on the client
     checkDevice();
     
     // Add event listener for window resize
