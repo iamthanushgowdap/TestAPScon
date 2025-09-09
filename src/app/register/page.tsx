@@ -83,22 +83,19 @@ export default function RegisterPage() {
     const userEmail = email.toLowerCase();
 
     try {
-      // Directly attempt to create the user. Firebase Auth handles email uniqueness.
       const userCredential = await createUserWithEmailAndPassword(auth, userEmail, password);
       const user = userCredential.user;
       
-      // Update the user's profile in Firebase Auth
       await updateProfile(user, {
         displayName: name,
       });
 
-      // Create the user document in Firestore.
       await setDoc(doc(db, 'users', user.uid), {
         name: name,
         email: userEmail,
         usn: usn,
         role: 'student',
-        status: 'pending', // All new registrations are pending approval
+        status: 'pending',
         branch: selectedBranch,
         semester: selectedSemester,
         year: `20${usnYear}`,
@@ -113,14 +110,16 @@ export default function RegisterPage() {
 
     } catch (error: any) {
         let errorMessage = "An unexpected error occurred during registration.";
-        let errorCode = error.code;
+        const errorCode = error.code;
         
         if (errorCode === 'auth/email-already-in-use') {
             errorMessage = 'This email address is already registered. Please use a different email or log in.';
         } else if (errorCode === 'auth/weak-password') {
-            errorMessage = 'The password is too weak. Please choose a stronger password.';
-        } else if (errorCode === 'permission-denied') {
-             errorMessage = "Your registration was blocked. This may be due to a USN conflict. Please verify your details and try again. If the problem persists, contact an administrator.";
+            errorMessage = 'The password is too weak. Please choose a stronger password (at least 6 characters).';
+        } else if (errorCode === 'auth/invalid-email') {
+            errorMessage = 'The email address is not valid. Please enter a correct email.';
+        } else {
+             console.error(`Registration Error (${errorCode}): ${error.message}`);
         }
         
         toast({
@@ -128,7 +127,6 @@ export default function RegisterPage() {
             description: errorMessage,
             variant: 'destructive',
         });
-        console.error(`${errorCode}: ${error.message}`);
     } finally {
         setLoading(false);
     }
