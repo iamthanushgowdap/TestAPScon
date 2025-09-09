@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 
 interface ScheduleItem {
+    id: string;
     time: string;
     subject: string;
     location: string;
@@ -78,6 +79,7 @@ export default function DashboardPage() {
         return () => unsubscribe();
     }, []);
 
+    const upcomingAssignment = assignmentItems[0];
 
     return (
         <AppLayout>
@@ -139,7 +141,7 @@ export default function DashboardPage() {
                                         </>
                                     ) : todaysSchedule.length > 0 ? (
                                         todaysSchedule.map(item => (
-                                            <div key={item.time} className="flex items-start">
+                                            <div key={item.id} className="flex items-start">
                                                 <Clock className="h-4 w-4 mr-3 mt-1 text-muted-foreground" />
                                                 <div>
                                                     <p className="font-semibold">{item.subject}</p>
@@ -243,7 +245,11 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                <ProactiveReminderCard />
+                <ProactiveReminderCard 
+                    taskName={upcomingAssignment.title}
+                    deadline={upcomingAssignment.dueDate}
+                    description={`Complete the ${upcomingAssignment.title} for ${upcomingAssignment.subject}.`}
+                />
 
                  {/* Floating Action Button for Cera.AI */}
                 <div className="fixed bottom-24 right-6 md:bottom-8 md:right-8 z-50">

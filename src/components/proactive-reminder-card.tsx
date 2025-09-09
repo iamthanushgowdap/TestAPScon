@@ -4,24 +4,31 @@
 import { proactiveDeadlineReminders, ProactiveDeadlineRemindersOutput } from '@/ai/flows/proactive-deadline-reminders';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lightbulb } from 'lucide-react';
-import { format, addDays } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { Skeleton } from './ui/skeleton';
 
-export function ProactiveReminderCard() {
+interface ProactiveReminderCardProps {
+    taskName: string;
+    deadline: string;
+    description: string;
+}
+
+export function ProactiveReminderCard({ taskName, deadline, description }: ProactiveReminderCardProps) {
     const [reminder, setReminder] = useState<ProactiveDeadlineRemindersOutput | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         async function fetchReminder() {
+             if (!taskName) {
+                setIsLoading(false);
+                return;
+            };
+            setIsLoading(true);
             try {
-                const deadlineDate = addDays(new Date(), 3);
-                const deadlineString = format(deadlineDate, 'EEEE, MMMM do');
-
                 const response = await proactiveDeadlineReminders({
-                    taskName: 'Submit Physics 101 Lab Report',
-                    deadline: deadlineString,
-                    description: 'Final lab report for the semester on wave-particle duality. Make sure all sections are complete and submitted via the student portal.'
+                    taskName: taskName,
+                    deadline: deadline,
+                    description: description
                 });
                 setReminder(response);
             } catch (error) {
@@ -33,7 +40,7 @@ export function ProactiveReminderCard() {
         }
 
         fetchReminder();
-    }, []);
+    }, [taskName, deadline, description]);
 
 
     if (isLoading) {
@@ -52,6 +59,7 @@ export function ProactiveReminderCard() {
                 </CardHeader>
                 <CardContent>
                     <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2 mt-2" />
                 </CardContent>
             </Card>
         );
