@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Edit, Trash2, Search, Briefcase, PlusCircle, ChevronsUpDown, Check, Mail, Phone, BookOpen, User as UserIcon } from "lucide-react";
+import { Edit, Trash2, Search, Briefcase, PlusCircle, ChevronsUpDown, Check, Mail, Phone, BookOpen, User as UserIcon, BookCopy } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { collection, onSnapshot, doc, deleteDoc, query, where, addDoc, updateDoc, setDoc, getDocs } from 'firebase/firestore';
@@ -53,8 +53,11 @@ interface FacultyData {
     email: string;
     phone?: string;
     branch?: string[];
+    semesters?: string[];
     title?: string;
 }
+
+const semesters = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
 
 export default function FacultyManagementPage() {
     const [faculty, setFaculty] = useState<FacultyData[]>([]);
@@ -70,7 +73,7 @@ export default function FacultyManagementPage() {
     // State for the dialog
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
-    const [currentFaculty, setCurrentFaculty] = useState<Partial<FacultyData & { password?: string, branch?: string[] }>>({});
+    const [currentFaculty, setCurrentFaculty] = useState<Partial<FacultyData & { password?: string, branch?: string[], semesters?: string[] }>>({});
     const [isSaving, setIsSaving] = useState(false);
 
 
@@ -161,7 +164,7 @@ export default function FacultyManagementPage() {
     
     const openAddDialog = () => {
         setIsEditMode(false);
-        setCurrentFaculty({ branch: [] });
+        setCurrentFaculty({ branch: [], semesters: [] });
         setIsDialogOpen(true);
     };
 
@@ -170,7 +173,8 @@ export default function FacultyManagementPage() {
         const branchArray = Array.isArray(facultyMember.branch) 
             ? facultyMember.branch 
             : (typeof facultyMember.branch === 'string' ? [facultyMember.branch] : []);
-        setCurrentFaculty({...facultyMember, branch: branchArray});
+        const semesterArray = Array.isArray(facultyMember.semesters) ? facultyMember.semesters : [];
+        setCurrentFaculty({...facultyMember, branch: branchArray, semesters: semesterArray});
         setIsDialogOpen(true);
     };
     
@@ -192,6 +196,7 @@ export default function FacultyManagementPage() {
                 email: currentFaculty.email,
                 phone: currentFaculty.phone || '',
                 branch: currentFaculty.branch || [],
+                semesters: currentFaculty.semesters || [],
                 title: currentFaculty.title || '',
                 role: 'faculty',
                 status: 'approved',
@@ -221,12 +226,11 @@ export default function FacultyManagementPage() {
         }
     };
     
-    const renderBranchBadges = (branchData: string | string[] | undefined) => {
-        if (!branchData) {
+    const renderBadges = (data: string[] | undefined, variant: "secondary" | "outline" = "secondary") => {
+        if (!data) {
             return <Badge variant="outline">N/A</Badge>;
         }
-        const branches = Array.isArray(branchData) ? branchData : [branchData];
-        return branches.map(b => <Badge key={b} variant="secondary">{b}</Badge>);
+        return data.map(item => <Badge key={item} variant={variant}>{item}</Badge>);
     }
 
     const renderDesktopView = () => (
@@ -235,7 +239,7 @@ export default function FacultyManagementPage() {
                 <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Contact</TableHead>
-                    <TableHead>Branch(es)</TableHead>
+                    <TableHead>Associations</TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -256,8 +260,13 @@ export default function FacultyManagementPage() {
                             <div className="text-xs text-muted-foreground">{f.phone || 'No phone'}</div>
                         </TableCell>
                         <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                                {renderBranchBadges(f.branch)}
+                            <div className="flex flex-col gap-1">
+                                <div className="flex flex-wrap gap-1">
+                                    {renderBadges(f.branch)}
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                     {renderBadges(f.semesters, "outline")}
+                                </div>
                             </div>
                         </TableCell>
                         <TableCell>{f.title || 'N/A'}</TableCell>
@@ -343,9 +352,14 @@ export default function FacultyManagementPage() {
                                      <p className="flex items-center gap-1.5"><Mail className="h-4 w-4" /> {f.email}</p>
                                      <p className="flex items-center gap-1.5"><Phone className="h-4 w-4" /> {f.phone || 'No phone'}</p>
                                 </div>
-                                 <div className="flex flex-wrap gap-1 pt-1 border-t">
-                                    {renderBranchBadges(f.branch)}
-                                </div>
+                                 <div className="flex flex-col gap-2 pt-2 border-t">
+                                    <div className="flex flex-wrap gap-1">
+                                        {renderBadges(f.branch)}
+                                    </div>
+                                    <div className="flex flex-wrap gap-1">
+                                        {renderBadges(f.semesters, 'outline')}
+                                    </div>
+                                 </div>
                             </div>
                         </div>
                     </CardContent>
@@ -400,7 +414,7 @@ export default function FacultyManagementPage() {
             </Card>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>{isEditMode ? 'Edit Faculty' : 'Add New Faculty'}</DialogTitle>
                         <DialogDescription>
@@ -497,17 +511,56 @@ export default function FacultyManagementPage() {
                                         })
                                      )}
                                 </div>
+                                {currentFaculty.branch?.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                        {currentFaculty.branch.map(b => (
+                                            <Badge key={b} variant="secondary">{b}</Badge>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
-                         {currentFaculty.branch?.length > 0 && (
-                            <div className="grid grid-cols-4 items-start gap-4">
-                                <div className="col-start-2 col-span-3 flex flex-wrap gap-1">
-                                    {currentFaculty.branch.map(b => (
-                                        <Badge key={b} variant="secondary">{b}</Badge>
-                                    ))}
+                        <div className="grid grid-cols-4 items-start gap-4 pt-2">
+                             <Label className="text-right pt-2">Semester(s)</Label>
+                             <div className="col-span-3">
+                                <div className="max-h-32 overflow-y-auto space-y-2 border rounded-md p-2">
+                                    {semesters.map((semester) => {
+                                        const isSelected = currentFaculty.semesters?.includes(semester) ?? false;
+                                        return (
+                                             <div 
+                                                key={semester} 
+                                                className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent cursor-pointer"
+                                                onClick={() => {
+                                                    const selectedSemesters = currentFaculty.semesters || [];
+                                                    if (isSelected) {
+                                                        setCurrentFaculty({ ...currentFaculty, semesters: selectedSemesters.filter(s => s !== semester) });
+                                                    } else {
+                                                        setCurrentFaculty({ ...currentFaculty, semesters: [...selectedSemesters, semester] });
+                                                    }
+                                                }}
+                                            >
+                                                <Checkbox
+                                                    id={`semester-${semester}`}
+                                                    checked={isSelected}
+                                                    readOnly
+                                                    className="pointer-events-none"
+                                                />
+                                                <Label htmlFor={`semester-${semester}`} className="font-normal cursor-pointer flex-1 flex items-center gap-2">
+                                                   <BookCopy className="h-4 w-4 text-muted-foreground" /> Semester {semester}
+                                                </Label>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            </div>
-                        )}
+                                 {currentFaculty.semesters?.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                        {currentFaculty.semesters.map(s => (
+                                            <Badge key={s} variant="outline">Sem {s}</Badge>
+                                        ))}
+                                    </div>
+                                )}
+                             </div>
+                        </div>
                     </div>
                     <DialogFooter>
                          <DialogClose asChild>

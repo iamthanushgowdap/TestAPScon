@@ -21,6 +21,8 @@ interface Branch {
     name: string;
 }
 
+const semesters = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+
 export default function RegisterPage() {
   const { toast } = useToast();
   const router = useRouter();
@@ -31,6 +33,7 @@ export default function RegisterPage() {
   const [usnYear, setUsnYear] = useState('');
   const [usnRoll, setUsnRoll] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState('');
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingBranches, setLoadingBranches] = useState(true);
@@ -74,6 +77,10 @@ export default function RegisterPage() {
         toast({ title: 'Error', description: 'Please select a branch.', variant: 'destructive' });
         return;
     }
+    if (!selectedSemester) {
+        toast({ title: 'Error', description: 'Please select a semester.', variant: 'destructive' });
+        return;
+    }
     setLoading(true);
 
     const usn = `1AP${usnYear}${selectedBranch.toUpperCase()}${usnRoll}`;
@@ -97,6 +104,7 @@ export default function RegisterPage() {
         role: 'student',
         status: 'pending',
         branch: selectedBranch,
+        semester: selectedSemester,
         year: `20${usnYear}`,
         createdAt: new Date(),
       });
@@ -177,19 +185,34 @@ export default function RegisterPage() {
                         />
                     </div>
                 </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="branch">Branch</Label>
-                    <Select onValueChange={setSelectedBranch} value={selectedBranch}>
-                        <SelectTrigger id="branch" disabled={loadingBranches}>
-                            <SelectValue placeholder={loadingBranches ? "Loading branches..." : "Select your branch"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {branches.map(branch => (
-                                <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="branch">Branch</Label>
+                        <Select onValueChange={setSelectedBranch} value={selectedBranch}>
+                            <SelectTrigger id="branch" disabled={loadingBranches}>
+                                <SelectValue placeholder={loadingBranches ? "Loading..." : "Select branch"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {branches.map(branch => (
+                                    <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="semester">Semester</Label>
+                        <Select onValueChange={setSelectedSemester} value={selectedSemester}>
+                            <SelectTrigger id="semester">
+                                <SelectValue placeholder="Select semester" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {semesters.map(sem => (
+                                    <SelectItem key={sem} value={sem}>Semester {sem}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="password">Password</Label>
