@@ -1,28 +1,17 @@
 
 :root {
-  --nav-background: #000;
-  --nav-icon-color: #fff;
-  --nav-icon-opacity: 0.4;
+  --nav-background: hsl(var(--card));
+  --nav-icon-color: hsl(var(--foreground));
+  --nav-icon-opacity: 0.5;
   --nav-icon-active-opacity: 1;
-  --nav-tubelight-color: #fff;
-  --nav-light-ray-color: rgba(255, 255, 255, 0.3);
+  --nav-tubelight-color: hsl(var(--primary));
+  --nav-light-ray-color: hsl(var(--primary) / 0.3);
 }
 
-.bottom-nav-container {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-    display: flex;
-    justify-content: center;
-    padding-bottom: 1rem;
-    pointer-events: none;
-}
 
 .bottom-nav {
   position: relative;
-  width: 95%;
+  width: 100%;
   max-width: 400px;
   height: 60px;
   display: grid;
@@ -66,6 +55,7 @@
   pointer-events: none;
 }
 .bottom-nav ul li a.active svg {
+  color: var(--nav-tubelight-color);
   opacity: var(--nav-icon-active-opacity);
 }
 .bottom-nav .tubelight {
@@ -87,6 +77,6 @@
   width: 180%;
   height: 60px;
   clip-path: polygon(15% 100%, 35% 0px, 65% 0px, 85% 100%);
-  background: linear-gradient(to bottom, var(--nav-light-ray-color) -50%, rgba(255, 255, 255, 0) 90%);
+  background: linear-gradient(to bottom, var(--nav-light-ray-color) -50%, transparent 90%);
   pointer-events: none;
 }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -11,7 +12,7 @@ const navItems = [
   { href: '/resources', icon: Bookmark, id: 'bookmark-icon' },
   { href: '/tasks', icon: PlusSquare, id: 'plus-icon' },
   { href: '/profile?role=student', icon: User, id: 'user-icon' },
-  { href: '/settings', icon: Settings, id: 'settings-icon' },
+  { href: '/chat', icon: Settings, id: 'settings-icon' },
 ];
 
 export default function BottomNavigation() {
@@ -32,21 +33,17 @@ export default function BottomNavigation() {
     if (navElement && activeIndex !== -1 && tubelightRef.current) {
       const activeLink = navElement.querySelectorAll('a')[activeIndex];
       if (activeLink) {
-        tubelightRef.current.style.left = `${activeLink.offsetLeft + activeLink.offsetWidth / 2}px`;
+        tubelightRef.current.style.left = `${activeLink.offsetLeft + tubelightRef.current.offsetWidth / 2}px`;
       }
     }
-  }, [activeIndex]);
+  }, [activeIndex, pathname]);
 
   const handleNavClick = (href: string, e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     router.push(href);
-    if (tubelightRef.current) {
-        tubelightRef.current.style.left = `${e.currentTarget.offsetLeft + e.currentTarget.offsetWidth / 2}px`;
-    }
   };
 
   return (
-    <div className="md:hidden">
       <nav ref={navRef} className="bottom-nav">
         {navItems.map((item, index) => (
           <ul key={item.id}>
@@ -65,6 +62,5 @@ export default function BottomNavigation() {
           <div className="light-ray"></div>
         </div>
       </nav>
-    </div>
   );
 }

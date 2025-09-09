@@ -82,7 +82,7 @@ export default function AttendancePage() {
 
           {/* Right Column: Subject-wise Breakdown */}
           <div className="lg:col-span-2">
-            <Tabs defaultValue="semester">
+            <Tabs defaultValue="semester" className="w-full">
                 <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                     <h2 className="text-xl font-semibold">Subject-wise Breakdown</h2>
                     <TabsList className="grid w-full sm:w-auto grid-cols-3">
@@ -122,10 +122,10 @@ export default function AttendancePage() {
                   </div>
                 </TabsContent>
                 <TabsContent value="week">
-                    <p className="text-muted-foreground text-center py-8">Weekly data is not yet available.</p>
+                    <div className="text-muted-foreground text-center py-8">Weekly data is not yet available.</div>
                 </TabsContent>
                  <TabsContent value="month">
-                    <p className="text-muted-foreground text-center py-8">Monthly data is not yet available.</p>
+                    <div className="text-muted-foreground text-center py-8">Monthly data is not yet available.</div>
                 </TabsContent>
             </Tabs>
           </div>

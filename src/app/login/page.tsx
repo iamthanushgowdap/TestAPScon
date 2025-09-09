@@ -63,8 +63,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4">
-      <div className="grid w-full max-w-6xl grid-cols-1 gap-8 md:grid-cols-2">
+    <div className="flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-background to-accent/20 p-4 overflow-hidden">
+      <div className="grid w-full max-w-6xl grid-cols-1 md:grid-cols-2 gap-8 md:gap-16">
         {/* Left Side: Carousel */}
         <motion.div
           initial={{ opacity: 0, x: -50 }}
@@ -112,7 +112,7 @@ export default function LoginPage() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
-          className="overflow-hidden"
+          className="overflow-hidden flex items-center justify-center"
         >
           <Card className="w-full max-w-md mx-auto glassmorphism">
             <CardContent className="p-6 sm:p-8">

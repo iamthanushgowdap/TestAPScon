@@ -96,7 +96,7 @@ export default function RegisterPage() {
         usn: usn,
         role: 'student',
         status: 'pending',
-        branch: selectedBranch.toUpperCase(),
+        branch: selectedBranch,
         year: `20${usnYear}`,
         createdAt: new Date(),
       });
@@ -129,8 +129,9 @@ export default function RegisterPage() {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.8, ease: 'easeOut' }}
+        className="w-full max-w-lg"
       >
-        <Card className="w-full max-w-lg mx-auto glassmorphism">
+        <Card className="mx-auto glassmorphism">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center gap-3 mb-2">
                 <GraduationCap className="h-8 w-8 text-primary" />
@@ -152,7 +153,7 @@ export default function RegisterPage() {
                 <div className="space-y-2">
                     <Label>USN (University Seat Number)</Label>
                     <div className="flex items-center gap-2">
-                        <span className="p-2 rounded-md bg-muted text-muted-foreground font-mono">1AP</span>
+                        <span className="p-2 rounded-md bg-muted text-muted-foreground font-mono text-sm">1AP</span>
                         <Input 
                             id="usn-year" 
                             type="text" 
@@ -163,7 +164,7 @@ export default function RegisterPage() {
                             onChange={(e) => setUsnYear(e.target.value.replace(/[^0-9]/g, ''))}
                             className="w-16 text-center"
                         />
-                         <span className="p-2 rounded-md bg-muted text-muted-foreground font-mono">{selectedBranch || '...'}</span>
+                         <span className="p-2 rounded-md bg-muted text-muted-foreground font-mono text-sm">{selectedBranch.substring(0,2) || '..'}</span>
                         <Input 
                             id="usn-roll" 
                             type="text" 
@@ -189,13 +190,15 @@ export default function RegisterPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" placeholder="••••••••" required value={password} onChange={(e) => setPassword(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm Password</Label>
-                    <Input id="confirm-password" type="password" placeholder="••••••••" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input id="password" type="password" placeholder="••••••••" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="confirm-password">Confirm Password</Label>
+                        <Input id="confirm-password" type="password" placeholder="••••••••" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                    </div>
                 </div>
 
                 <Button type="submit" className="w-full mt-4" disabled={loading || loadingBranches}>

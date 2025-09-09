@@ -90,7 +90,7 @@ export default function FacultyDashboardPage() {
                              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-headline text-foreground">
                                 Welcome, {userData?.name || 'Faculty'}
                             </h1>
-                            <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 <p className="text-muted-foreground">
                                     Your dashboard for:
                                 </p>
@@ -156,10 +156,10 @@ export default function FacultyDashboardPage() {
             </Card>
 
              {/* Floating Action Button for Cera.AI */}
-            <div className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50">
-                <Button asChild size="icon" className="h-14 w-14 md:h-16 md:w-16 rounded-full shadow-lg bg-primary hover:bg-primary/90 transition-transform hover:scale-110">
+            <div className="fixed bottom-24 right-6 md:bottom-8 md:right-8 z-50">
+                <Button asChild size="icon" className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 transition-transform hover:scale-110">
                     <Link href="/chat">
-                        <Bot className="h-7 w-7 md:h-8 md:w-8" />
+                        <Bot className="h-7 w-7" />
                         <span className="sr-only">Chat with Cera.AI</span>
                     </Link>
                 </Button>

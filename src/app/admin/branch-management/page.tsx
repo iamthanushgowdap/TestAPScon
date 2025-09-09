@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Edit, Trash2, Network, PlusCircle, Search } from "lucide-react";
+import { Edit, Trash2, Network, PlusCircle, Search, Power, PowerOff } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { collection, onSnapshot, doc, deleteDoc, addDoc, updateDoc, query } from 'firebase/firestore';
@@ -29,10 +29,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogClose
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 
 interface Branch {
     id: string;
@@ -52,6 +55,8 @@ export default function BranchManagementPage() {
     const [isEditMode, setIsEditMode] = useState(false);
     const [currentBranch, setCurrentBranch] = useState<Partial<Branch>>({});
     const [isSaving, setIsSaving] = useState(false);
+    const isMobile = useIsMobile();
+
 
     useEffect(() => {
         const q = query(collection(db, "branches"));
@@ -67,7 +72,7 @@ export default function BranchManagementPage() {
         });
 
         return () => unsubscribe();
-    }, [toast]);
+    }, []);
     
     useEffect(() => {
         const results = branches.filter(b => 
@@ -124,6 +129,112 @@ export default function BranchManagementPage() {
             setIsSaving(false);
         }
     };
+    
+    const renderDesktopView = () => (
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Branch Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {filteredBranches.length === 0 ? (
+                    <TableRow>
+                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                            No branches found.
+                        </TableCell>
+                    </TableRow>
+                ) : (
+                    filteredBranches.map(branch => (
+                    <TableRow key={branch.id}>
+                        <TableCell className="font-medium">{branch.name}</TableCell>
+                        <TableCell>
+                            <Badge variant={branch.status === 'online' ? 'default' : 'secondary'}>
+                                {branch.status}
+                            </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end">
+                                <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => openEditDialog(branch)}>
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                                    <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button size="icon" variant="destructive" className="h-8 w-8">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action will permanently delete the branch. This cannot be undone.
+                                        </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDelete(branch.id)}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                        </TableCell>
+                    </TableRow>
+                )))}
+            </TableBody>
+        </Table>
+    );
+
+    const renderMobileView = () => (
+        <div className="space-y-4">
+            {filteredBranches.length === 0 ? (
+                 <div className="text-center text-muted-foreground py-8">
+                    No branches found.
+                </div>
+            ) : (
+                filteredBranches.map(branch => (
+                <Card key={branch.id} className="glassmorphism">
+                    <CardContent className="p-4">
+                         <div className="flex justify-between items-start gap-4">
+                            <div className="space-y-1">
+                                <p className="font-semibold">{branch.name}</p>
+                                <Badge variant={branch.status === 'online' ? 'default' : 'secondary'} className="capitalize">
+                                    {branch.status === 'online' ? <Power className="mr-1 h-3 w-3" /> : <PowerOff className="mr-1 h-3 w-3" />}
+                                    {branch.status}
+                                </Badge>
+                            </div>
+                             <div className="flex gap-2 justify-end">
+                                <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => openEditDialog(branch)}>
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button size="icon" variant="destructive" className="h-8 w-8">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action will permanently delete the branch. This cannot be undone.
+                                        </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDelete(branch.id)}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )))}
+        </div>
+    );
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
@@ -162,63 +273,10 @@ export default function BranchManagementPage() {
                 <CardContent>
                     {loading ? (
                         <div className="space-y-4">
-                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
                         </div>
                     ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Branch Name</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredBranches.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={3} className="text-center text-muted-foreground">
-                                        No branches found. You may not have permission to view them.
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                filteredBranches.map(branch => (
-                                <TableRow key={branch.id}>
-                                    <TableCell className="font-medium">{branch.name}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={branch.status === 'online' ? 'default' : 'secondary'}>
-                                            {branch.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex gap-2 justify-end">
-                                            <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => openEditDialog(branch)}>
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                             <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button size="icon" variant="destructive" className="h-8 w-8">
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This action will permanently delete the branch. This cannot be undone.
-                                                    </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDelete(branch.id)}>Delete</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )))}
-                        </TableBody>
-                    </Table>
+                       isMobile ? renderMobileView() : renderDesktopView()
                     )}
                 </CardContent>
             </Card>
@@ -254,7 +312,9 @@ export default function BranchManagementPage() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                         <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                         </DialogClose>
                         <Button onClick={handleSaveChanges} disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Changes'}</Button>
                     </DialogFooter>
                 </DialogContent>

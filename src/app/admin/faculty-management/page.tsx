@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Edit, Trash2, Search, Briefcase, PlusCircle, ChevronsUpDown, Check } from "lucide-react";
+import { Edit, Trash2, Search, Briefcase, PlusCircle, ChevronsUpDown, Check, Mail, Phone, BookOpen, User as UserIcon } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { collection, onSnapshot, doc, deleteDoc, query, where, addDoc, updateDoc, setDoc, getDocs } from 'firebase/firestore';
@@ -30,12 +30,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogClose
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 
 interface Branch {
     id: string;
@@ -48,7 +52,7 @@ interface FacultyData {
     name?: string;
     email: string;
     phone?: string;
-    branch?: string[] | string;
+    branch?: string[];
     title?: string;
 }
 
@@ -61,6 +65,7 @@ export default function FacultyManagementPage() {
     const { toast } = useToast();
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [permissionError, setPermissionError] = useState(false);
+    const isMobile = useIsMobile();
     
     // State for the dialog
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -218,16 +223,140 @@ export default function FacultyManagementPage() {
     
     const renderBranchBadges = (branchData: string | string[] | undefined) => {
         if (!branchData) {
-            return 'N/A';
+            return <Badge variant="outline">N/A</Badge>;
         }
         const branches = Array.isArray(branchData) ? branchData : [branchData];
         return branches.map(b => <Badge key={b} variant="secondary">{b}</Badge>);
     }
 
+    const renderDesktopView = () => (
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Branch(es)</TableHead>
+                    <TableHead>Title</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {filteredFaculty.length === 0 ? (
+                    <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                            {permissionError ? "You do not have permission to view faculty." : "No faculty members found."}
+                        </TableCell>
+                    </TableRow>
+                ) : (
+                    filteredFaculty.map(f => (
+                    <TableRow key={f.id}>
+                        <TableCell className="font-medium">{f.name || 'N/A'}</TableCell>
+                         <TableCell>
+                            <div className="text-sm">{f.email}</div>
+                            <div className="text-xs text-muted-foreground">{f.phone || 'No phone'}</div>
+                        </TableCell>
+                        <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                                {renderBranchBadges(f.branch)}
+                            </div>
+                        </TableCell>
+                        <TableCell>{f.title || 'N/A'}</TableCell>
+                        <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end">
+                                <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => openEditDialog(f)}>
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                                    <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button size="icon" variant="destructive" className="h-8 w-8">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will permanently delete the faculty member's record. This action cannot be undone.
+                                        </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDelete(f.id)}>Continue</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                        </TableCell>
+                    </TableRow>
+                )))}
+            </TableBody>
+        </Table>
+    );
+
+    const renderMobileView = () => (
+        <div className="space-y-4">
+            {filteredFaculty.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                    {permissionError ? "You do not have permission to view faculty." : "No faculty members found."}
+                </div>
+            ) : (
+                filteredFaculty.map(f => (
+                <Card key={f.id} className="glassmorphism">
+                    <CardContent className="p-4">
+                        <div className="flex items-start gap-4">
+                             <Avatar>
+                                <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${f.name}`} alt={f.name || 'F'} />
+                                <AvatarFallback>{f.name?.charAt(0) || 'F'}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 space-y-2">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="font-semibold">{f.name}</p>
+                                        {f.title && <p className="text-xs text-muted-foreground">{f.title}</p>}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditDialog(f)}>
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This will permanently delete the faculty member.
+                                                </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDelete(f.id)}>Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </div>
+                                <div className="text-sm text-muted-foreground space-y-1 pt-1 border-t">
+                                     <p className="flex items-center gap-1.5"><Mail className="h-4 w-4" /> {f.email}</p>
+                                     <p className="flex items-center gap-1.5"><Phone className="h-4 w-4" /> {f.phone || 'No phone'}</p>
+                                </div>
+                                 <div className="flex flex-wrap gap-1 pt-1 border-t">
+                                    {renderBranchBadges(f.branch)}
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )))}
+        </div>
+    );
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground flex items-center gap-2">
                         <Briefcase />
@@ -237,7 +366,7 @@ export default function FacultyManagementPage() {
                         Add, view, edit, and manage all faculty members.
                     </p>
                 </div>
-                 <Button onClick={openAddDialog}>
+                 <Button onClick={openAddDialog} className="shrink-0">
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add Faculty
                 </Button>
@@ -262,67 +391,10 @@ export default function FacultyManagementPage() {
                 <CardContent>
                     {loading ? (
                         <div className="space-y-4">
-                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
                         </div>
                     ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>Branch(es)</TableHead>
-                                <TableHead>Title</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredFaculty.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-center text-muted-foreground">
-                                        {permissionError ? "You do not have permission to view faculty." : "No faculty members found."}
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                filteredFaculty.map(f => (
-                                <TableRow key={f.id}>
-                                    <TableCell className="font-medium">{f.name || 'N/A'}</TableCell>
-                                    <TableCell>{f.email}</TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-wrap gap-1">
-                                            {renderBranchBadges(f.branch)}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{f.title || 'N/A'}</TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex gap-2 justify-end">
-                                            <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => openEditDialog(f)}>
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                             <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button size="icon" variant="destructive" className="h-8 w-8">
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This will permanently delete the faculty member's record. This action cannot be undone. A full implementation would also delete the user from Firebase Authentication.
-                                                    </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDelete(f.id)}>Continue</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )))}
-                        </TableBody>
-                    </Table>
+                        isMobile ? renderMobileView() : renderDesktopView()
                     )}
                 </CardContent>
             </Card>
@@ -335,7 +407,7 @@ export default function FacultyManagementPage() {
                            {isEditMode ? "Update the details for this faculty member." : "Enter the details for the new faculty member."}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="name" className="text-right">Name</Label>
                             <Input 
@@ -415,6 +487,7 @@ export default function FacultyManagementPage() {
                                                         id={`branch-${branch.id}`}
                                                         checked={isSelected}
                                                         readOnly
+                                                        className="pointer-events-none"
                                                     />
                                                     <Label htmlFor={`branch-${branch.id}`} className="font-normal cursor-pointer flex-1">
                                                         {branch.name}
@@ -437,7 +510,9 @@ export default function FacultyManagementPage() {
                         )}
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                         <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                         </DialogClose>
                         <Button onClick={handleSaveChanges} disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Changes'}</Button>
                     </DialogFooter>
                 </DialogContent>

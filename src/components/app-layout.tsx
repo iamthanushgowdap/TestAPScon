@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { usePathname as useCurrentPath } from 'next/navigation'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,13 +45,12 @@ const navItems = [
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const currentPath = useCurrentPath();
   const router = useRouter();
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const isAdmin = currentPath.includes('/admin');
-  const isFaculty = currentPath.includes('/faculty');
+  const isAdminOrFaculty = pathname.startsWith('/admin') || pathname.startsWith('/faculty');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -64,6 +62,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                  router.push('/login');
             }
         }
+        setLoading(false);
     });
     return () => unsubscribe();
   }, [pathname, router]);
@@ -85,11 +84,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     }
   };
 
-  if (isFaculty || isAdmin) {
+  if (isAdminOrFaculty) {
     return <>{children}</>
   }
   
-  if (!user && !['/login', '/register', '/'].includes(pathname)) {
+  if (loading || (!user && !['/login', '/register', '/'].includes(pathname))) {
     return null; // Or a loading spinner
   }
 
@@ -160,7 +159,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 </DropdownMenu>
             </div>
         </header>
-        <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+        <main className="flex-1 overflow-y-auto bg-background pb-20 md:pb-0">
             {children}
         </main>
         <footer className="fixed bottom-0 left-0 right-0 md:hidden bg-background/80 backdrop-blur-sm p-2 z-50 border-t">

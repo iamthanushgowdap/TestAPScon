@@ -24,6 +24,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 
 type UserRole = 'student' | 'faculty' | 'admin';
 type UserStatus = 'pending' | 'approved' | 'declined';
@@ -46,6 +49,8 @@ export default function UserManagementPage() {
     const { toast } = useToast();
     const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
     const [permissionError, setPermissionError] = useState(false);
+    const isMobile = useIsMobile();
+
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -121,6 +126,153 @@ export default function UserManagementPage() {
         }
     }
 
+    const renderDesktopView = () => (
+         <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>USN</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {filteredUsers.length === 0 ? (
+                    <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                            {permissionError ? "You do not have permission to view users." : "No users found."}
+                        </TableCell>
+                    </TableRow>
+                ) : (
+                    filteredUsers.map(user => (
+                    <TableRow key={user.id}>
+                        <TableCell>
+                             <div className="flex items-center gap-3">
+                                <Avatar>
+                                    <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`} alt={user.name || 'U'} />
+                                    <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <div className="font-medium">{user.name || 'N/A'}</div>
+                                    <div className="text-muted-foreground text-xs">{user.email}</div>
+                                </div>
+                            </div>
+                        </TableCell>
+                        <TableCell className="font-mono">{user.usn || 'N/A'}</TableCell>
+                        <TableCell>
+                            <div className="flex items-center gap-2">
+                                <RoleIcon role={user.role} />
+                                <span className="capitalize">{user.role}</span>
+                            </div>
+                        </TableCell>
+                        <TableCell>
+                            <Badge variant={
+                                user.status === 'pending' ? 'secondary' :
+                                user.status === 'approved' ? 'default' : 'destructive'
+                            } className="capitalize">
+                                {user.status}
+                            </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end">
+                                <Button size="icon" variant="outline" className="h-8 w-8">
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                                    <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button size="icon" variant="destructive" className="h-8 w-8">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete the user
+                                            and remove their data from our servers.
+                                        </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>Continue</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                        </TableCell>
+                    </TableRow>
+                )))}
+            </TableBody>
+        </Table>
+    );
+
+    const renderMobileView = () => (
+         <div className="space-y-4">
+            {filteredUsers.length === 0 ? (
+                 <div className="text-center text-muted-foreground py-8">
+                    {permissionError ? "You do not have permission to view users." : "No users found."}
+                </div>
+            ) : (
+                filteredUsers.map(user => (
+                <Card key={user.id} className="glassmorphism">
+                    <CardContent className="p-4">
+                         <div className="flex items-start gap-4">
+                            <Avatar>
+                                <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`} alt={user.name || 'U'} />
+                                <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+                            </Avatar>
+                             <div className="flex-1 space-y-2">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="font-semibold">{user.name}</p>
+                                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <RoleIcon role={user.role} />
+                                        <Badge variant={
+                                            user.status === 'pending' ? 'secondary' :
+                                            user.status === 'approved' ? 'default' : 'destructive'
+                                        } className="capitalize">
+                                            {user.status}
+                                        </Badge>
+                                    </div>
+                                </div>
+                                <div className="text-sm text-muted-foreground pt-1 border-t">
+                                     {user.usn || 'No USN'}
+                                </div>
+                                <div className="flex gap-2 justify-end pt-2">
+                                    <Button size="sm" variant="outline" className="flex-1">
+                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                             <Button size="sm" variant="destructive" className="flex-1">
+                                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This will permanently delete the user.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>Delete</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )))}
+        </div>
+    );
+
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
@@ -153,78 +305,10 @@ export default function UserManagementPage() {
                 <CardContent>
                     {loading ? (
                         <div className="space-y-4">
-                            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
                         </div>
                     ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>USN</TableHead>
-                                <TableHead>Role</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredUsers.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                                       {permissionError ? "You do not have permission to view users." : "No users found."}
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                filteredUsers.map(user => (
-                                <TableRow key={user.id}>
-                                    <TableCell className="font-medium">{user.name || 'N/A'}</TableCell>
-                                    <TableCell>{user.email}</TableCell>
-                                    <TableCell className="font-mono">{user.usn || 'N/A'}</TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <RoleIcon role={user.role} />
-                                            <span className="capitalize">{user.role}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={
-                                            user.status === 'pending' ? 'secondary' :
-                                            user.status === 'approved' ? 'default' : 'destructive'
-                                        } className="capitalize">
-                                            {user.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex gap-2 justify-end">
-                                            <Button size="icon" variant="outline" className="h-8 w-8">
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                             <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button size="icon" variant="destructive" className="h-8 w-8">
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This action cannot be undone. This will permanently delete the user
-                                                        and remove their data from our servers.
-                                                    </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>Continue</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )))}
-                        </TableBody>
-                    </Table>
+                        isMobile ? renderMobileView() : renderDesktopView()
                     )}
                 </CardContent>
             </Card>

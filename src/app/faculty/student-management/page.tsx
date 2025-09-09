@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Search } from "lucide-react";
+import { Users, Search, GraduationCap, Ticket, Mail, University } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,9 @@ import { collection, query, where, doc, getDoc, getDocs } from 'firebase/firesto
 import { db, auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 
 type StudentStatus = 'pending' | 'approved' | 'declined';
 
@@ -32,6 +35,7 @@ export default function StudentManagementPage() {
     const { toast } = useToast();
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [permissionError, setPermissionError] = useState(false);
+    const isMobile = useIsMobile();
 
     const fetchStudents = useCallback(async (user: User) => {
         setLoading(true);
@@ -117,6 +121,96 @@ export default function StudentManagementPage() {
         setFilteredStudents(results);
     }, [searchTerm, students]);
 
+    const renderDesktopView = () => (
+         <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>USN</TableHead>
+                    <TableHead>Branch</TableHead>
+                    <TableHead>Status</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {filteredStudents.length === 0 ? (
+                    <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                            {permissionError ? "You do not have permission to view students." : "No students found for your branch(es)."}
+                        </TableCell>
+                    </TableRow>
+                ) : (
+                    filteredStudents.map(student => (
+                    <TableRow key={student.id}>
+                        <TableCell>
+                            <div className="flex items-center gap-3">
+                                <Avatar>
+                                    <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${student.name}`} alt={student.name} />
+                                    <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <div className="font-medium">{student.name}</div>
+                                    <div className="text-muted-foreground text-xs">{student.email}</div>
+                                </div>
+                            </div>
+                        </TableCell>
+                        <TableCell className="font-mono">{student.usn}</TableCell>
+                        <TableCell>
+                            <Badge variant="outline">{student.branch}</Badge>
+                        </TableCell>
+                        <TableCell>
+                            <Badge variant={
+                                student.status === 'pending' ? 'secondary' :
+                                student.status === 'approved' ? 'default' : 'destructive'
+                            } className="capitalize">
+                                {student.status}
+                            </Badge>
+                        </TableCell>
+                    </TableRow>
+                )))}
+            </TableBody>
+        </Table>
+    );
+
+    const renderMobileView = () => (
+        <div className="space-y-4">
+             {filteredStudents.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                     {permissionError ? "You do not have permission to view students." : "No students found for your branch(es)."}
+                </div>
+            ) : (
+                filteredStudents.map(student => (
+                    <Card key={student.id} className="glassmorphism">
+                        <CardContent className="p-4">
+                            <div className="flex items-start gap-4">
+                                <Avatar>
+                                    <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${student.name}`} alt={student.name} />
+                                    <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 space-y-2">
+                                     <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-semibold">{student.name}</p>
+                                            <p className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" />{student.email}</p>
+                                        </div>
+                                         <Badge variant={
+                                            student.status === 'pending' ? 'secondary' :
+                                            student.status === 'approved' ? 'default' : 'destructive'
+                                        } className="capitalize">{student.status}</Badge>
+                                    </div>
+                                    <div className="text-sm text-muted-foreground space-y-1 pt-1 border-t">
+                                        <p className="flex items-center gap-1.5"><Ticket className="h-4 w-4" /> {student.usn}</p>
+                                        <p className="flex items-center gap-1.5"><University className="h-4 w-4" /> {student.branch}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))
+            )}
+        </div>
+    );
+
+
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
             <div>
@@ -148,49 +242,10 @@ export default function StudentManagementPage() {
                 <CardContent>
                     {loading ? (
                         <div className="space-y-4">
-                            <Skeleton className="h-12 w-full" />
-                            <Skeleton className="h-12 w-full" />
-                            <Skeleton className="h-12 w-full" />
+                             {[...Array(3)].map((_,i) => <Skeleton key={i} className="h-16 w-full" />)}
                         </div>
                     ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>USN</TableHead>
-                                <TableHead>Branch</TableHead>
-                                <TableHead>Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredStudents.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-center text-muted-foreground">
-                                        {permissionError ? "You do not have permission to view students." : "No students found for your branch(es)."}
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                filteredStudents.map(student => (
-                                <TableRow key={student.id}>
-                                    <TableCell>{student.name}</TableCell>
-                                    <TableCell>{student.email}</TableCell>
-                                    <TableCell className="font-mono">{student.usn}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline">{student.branch}</Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={
-                                            student.status === 'pending' ? 'secondary' :
-                                            student.status === 'approved' ? 'default' : 'destructive'
-                                        } className="capitalize">
-                                            {student.status}
-                                        </Badge>
-                                    </TableCell>
-                                </TableRow>
-                            )))}
-                        </TableBody>
-                    </Table>
+                        isMobile ? renderMobileView() : renderDesktopView()
                     )}
                 </CardContent>
             </Card>

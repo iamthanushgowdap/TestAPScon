@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -58,7 +59,7 @@
     --border: 240 5% 25%;
     --input: 240 5% 20%;
     --ring: 260 70% 65%;
-    --sidebar-background: 240 5% 15%;
+    --sidebar-background: 240 5% 12%;
     --sidebar-foreground: 240 5% 95%;
     --sidebar-primary: 260 70% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
@@ -77,7 +78,7 @@
     @apply bg-background text-foreground;
   }
   .glassmorphism {
-    @apply bg-card/50 backdrop-blur-lg border border-white/20;
+     @apply bg-card/50 backdrop-blur-lg border;
   }
   .dark .glassmorphism {
     @apply bg-card/30 border-white/10;

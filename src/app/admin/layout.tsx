@@ -155,12 +155,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <main className="flex-1 overflow-y-auto bg-background pb-20 md:pb-0">
             {children}
         </main>
-        <footer className="fixed bottom-0 left-0 right-0 md:hidden z-50">
+        <footer className="fixed bottom-0 left-0 right-0 md:hidden z-50 p-2 bg-background/80 backdrop-blur-sm border-t">
           <AdminBottomNavigation />
         </footer>
         </SidebarInset>
     </SidebarProvider>
   );
 }
-
-    
