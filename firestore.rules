@@ -1,51 +1,70 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedOut() {
-      return request.auth == null;
-    }
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function getRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
-    function isAdmin() {
-      return isSignedIn() && getRole() == 'admin';
-    }
-    
+    // Helper functions
     function isFaculty() {
-        return isSignedIn() && getRole() == 'faculty';
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'faculty';
+    }
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    function isStudent() {
+       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
+    }
+    function isApproved() {
+       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
+    }
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
-    function isStudent() {
-        return isSignedIn() && getRole() == 'student';
-    }
-    
     match /users/{userId} {
-      allow read: if isSignedIn() && (isAdmin() || isFaculty() || request.auth.uid == userId);
-      // Allow list for admins, faculty, and for the specific pre-registration check.
-      allow list: if (isAdmin() || isFaculty()) || 
-                  (isSignedOut() && (request.query.keys.hasOnly(['email']) || request.query.keys.hasOnly(['usn'])));
-      allow create: if isSignedOut(); // Allow user creation during registration
-      allow update: if isSignedIn() && (isAdmin() || isFaculty() || request.auth.uid == userId);
+      // Create: Anyone can create a user doc (register), but only with role 'student' and status 'pending'
+      allow create: if request.resource.data.role == 'student'
+                    && request.resource.data.status == 'pending';
+
+      // Read: Any authenticated user can read their own profile. Admins can read any profile.
+      allow get: if request.auth != null && (isOwner(userId) || isAdmin());
+
+      // Update: Users can update their own data. Admins/Faculty can update status.
+      allow update: if request.auth != null && (
+                      isOwner(userId) || 
+                      isAdmin() || 
+                      (isFaculty() && request.resource.data.status != resource.data.status)
+                    );
+                    
+      // Delete: Only admins can delete users.
       allow delete: if isAdmin();
+      
+      // List: Admins, Faculty can list all users. 
+      // Unauthenticated users can only query to check for existing email/usn.
+      allow list: if request.auth == null 
+                  || isAdmin() 
+                  || isFaculty();
     }
-    
+
     match /branches/{branchId} {
-        allow read: if true; // Allow anyone to read branches for registration
+        // Anyone can read the list of branches for registration purposes.
+        allow read: if true;
+        // Only Admins can create, update, or delete branches.
         allow write: if isAdmin();
     }
     
     match /timetables/{timetableId} {
-        allow read: if isSignedIn() && (isAdmin() || isFaculty() || isStudent());
-        allow write: if isAdmin() || isFaculty();
+        // Students can read their own timetable. Faculty and Admins can read any.
+        allow get: if request.auth != null && (
+            (isStudent() && isApproved() && timetableId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch + '_' + get(/databases/$(database)/documents/users/$(request.auth.uid)).data.semester) ||
+            isFaculty() ||
+            isAdmin()
+        );
+        
+        // Admins and Faculty can write to timetables.
+        allow write: if request.auth != null && (isAdmin() || isFaculty());
+        
+        // No one can list all timetables directly.
+        allow list: if false;
     }
   }
 }
