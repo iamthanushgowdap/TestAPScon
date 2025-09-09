@@ -21,30 +21,30 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isAuth() && request.auth.uid == userId;
+    }
+    
+    function isStudent(userId) {
+        return isAuth() && get(/databases/$(database)/documents/users/$(userId)).data.role == 'student';
     }
 
     // --- Collection Rules ---
 
     // Users Collection
     match /users/{userId} {
-      // Create: Allow a user to create their own document if they are authenticated.
-      // This happens right after auth creation.
+      // Create: Anyone can create their own user document during registration.
       allow create: if isOwner(userId);
       
-      // Read: Users can read their own profile. Admins can read any profile. 
+      // Get: Users can read their own profile. Admins can read any profile. 
       // Faculty can read profiles of students in their assigned branches.
-      allow get: if isAuth() && (isOwner(userId) || isAdmin() || 
-                 (isFaculty() && get(/databases/$(database)/documents/users/$(userId)).data.role == 'student' && get(/databases/$(database)/documents/users/$(userId)).data.branch in getRequestingUserData().branch));
+      allow get: if isOwner(userId) || isAdmin() || (isFaculty() && isStudent(userId) && get(/databases/$(database)/documents/users/$(userId)).data.branch in getRequestingUserData().branch);
       
-      // List: Admins can list all users. Faculty can list students in their branch.
-      // This is constrained in the application code query, not in the rules.
+      // List: Only Admins and Faculty can list users. This is for management pages.
       allow list: if isAdmin() || isFaculty();
 
-      // Write: Users can update their own profile. Admins can update any profile.
+      // Update: Users can update their own profile. Admins can update any profile.
       // Faculty can update student profiles within their branch (for approvals).
-      allow update: if (isAuth() && isOwner(userId)) || isAdmin() || 
-                    (isFaculty() && get(/databases/$(database)/documents/users/$(userId)).data.role == 'student' && get(/databases/$(database)/documents/users/$(userId)).data.branch in getRequestingUserData().branch);
+      allow update: if isOwner(userId) || isAdmin() || (isFaculty() && isStudent(userId) && get(/databases/$(database)/documents/users/$(userId)).data.branch in getRequestingUserData().branch);
 
       // Delete: Only admins can delete users.
       allow delete: if isAdmin();
@@ -53,7 +53,7 @@ service cloud.firestore {
     // Branches Collection
     match /branches/{branchId} {
       // Read: Anyone can read the list of branches (needed for registration page).
-      allow read: if true;
+      allow get, list: if true;
       // Write: Only admins can create or modify branches.
       allow write: if isAdmin();
     }
@@ -61,6 +61,7 @@ service cloud.firestore {
     // Timetables Collection
     match /timetables/{timetableId} {
       // Read: Any authenticated user can read any timetable.
+      // (Permissions are controlled by knowing the timetableId, which is branch_semester).
       allow read: if isAuth();
       
       // Write: Admins and Faculty can create, update, and delete timetables.

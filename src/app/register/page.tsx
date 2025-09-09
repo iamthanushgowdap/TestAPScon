@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { collection, doc, getDocs, setDoc, query, where, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, query, where } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -83,32 +83,22 @@ export default function RegisterPage() {
     const userEmail = email.toLowerCase();
 
     try {
-        const emailQuery = query(collection(db, 'users'), where('email', '==', userEmail));
-        const usnQuery = query(collection(db, 'users'), where('usn', '==', usn));
-
-        const emailQuerySnapshot = await getDocs(emailQuery);
-        if (!emailQuerySnapshot.empty) {
-            throw new Error("This email address is already registered.");
-        }
-
-        const usnQuerySnapshot = await getDocs(usnQuery);
-        if (!usnQuerySnapshot.empty) {
-            throw new Error("This USN is already registered.");
-        }
-
+      // Directly attempt to create the user. Firebase Auth handles email uniqueness.
       const userCredential = await createUserWithEmailAndPassword(auth, userEmail, password);
       const user = userCredential.user;
       
+      // Update the user's profile in Firebase Auth
       await updateProfile(user, {
         displayName: name,
       });
 
+      // Create the user document in Firestore.
       await setDoc(doc(db, 'users', user.uid), {
         name: name,
         email: userEmail,
         usn: usn,
         role: 'student',
-        status: 'pending',
+        status: 'pending', // All new registrations are pending approval
         branch: selectedBranch,
         semester: selectedSemester,
         year: `20${usnYear}`,
@@ -120,16 +110,25 @@ export default function RegisterPage() {
         description: 'Your account has been created. Please wait for admin approval to log in.',
       });
       router.push('/login');
+
     } catch (error: any) {
-        let errorMessage = error.message;
-        if (error.code === 'auth/email-already-in-use') {
-            errorMessage = 'This email address is already registered.';
+        let errorMessage = "An unexpected error occurred during registration.";
+        let errorCode = error.code;
+        
+        if (errorCode === 'auth/email-already-in-use') {
+            errorMessage = 'This email address is already registered. Please use a different email or log in.';
+        } else if (errorCode === 'auth/weak-password') {
+            errorMessage = 'The password is too weak. Please choose a stronger password.';
+        } else if (errorCode === 'permission-denied') {
+            errorMessage = 'You do not have permission to perform this action. This could be due to a USN conflict. Please check your USN and try again.';
         }
+        
         toast({
             title: 'Registration Failed',
             description: errorMessage,
             variant: 'destructive',
         });
+        console.error(`${errorCode}: ${error.message}`);
     } finally {
         setLoading(false);
     }
