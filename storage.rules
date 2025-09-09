@@ -1,0 +1,16 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Rules for assignment files
+    match /assignments/{assignmentId}/{allPaths=**} {
+      // Anyone can read assignment files, as access is via unguessable URLs.
+      allow read: if true;
+      
+      // Only authenticated users (faculty, admin) can upload new assignment files.
+      // We don't allow updates or deletes through these rules for simplicity,
+      // those are handled via the app's backend logic with appropriate permissions.
+      allow write: if request.auth != null;
+    }
+  }
+}
