@@ -133,8 +133,8 @@ export default function FacultyAssignmentsPage() {
         }
         setIsSaving(true);
         try {
-            let documentURL: string | undefined = currentAssignment.documentURL;
-            let documentName: string | undefined = currentAssignment.documentName;
+            let documentURL = currentAssignment.documentURL || '';
+            let documentName = currentAssignment.documentName || '';
             
             const docId = isEditMode ? currentAssignment.id! : doc(collection(db, 'assignments')).id;
 

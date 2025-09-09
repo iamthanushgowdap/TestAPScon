@@ -130,8 +130,8 @@ export default function AdminAssignmentsPage() {
         }
         setIsSaving(true);
         try {
-            let documentURL: string | undefined = currentAssignment.documentURL;
-            let documentName: string | undefined = currentAssignment.documentName;
+            let documentURL = currentAssignment.documentURL || '';
+            let documentName = currentAssignment.documentName || '';
 
             if (file) {
                 const docId = isEditMode ? currentAssignment.id! : doc(collection(db, 'assignments')).id;
