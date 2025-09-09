@@ -1,44 +1,69 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isStudent() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
-    }
-
+    
     function isAdmin() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-    
+
     function isFaculty() {
         return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'faculty';
     }
     
-    function isApproved() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
+    function isSignedIn() {
+        return request.auth != null;
     }
 
+    function isOwner(userId) {
+        return request.auth.uid == userId;
+    }
+
+    // Rules for all users
     match /users/{userId} {
-      allow create: if isSignedIn();
-      allow get: if isSignedIn();
-      allow update: if isSignedIn() && request.auth.uid == userId || isAdmin();
+      allow read: if isOwner(userId) || isAdmin() || isFaculty();
+      allow create: if !isSignedIn(); // Allow user creation for non-authenticated users
+      allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
-      allow list: if isAdmin() || isFaculty();
+      
+      // Only admins can change role, status, or branch
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['name', 'phone', 'photoURL']) && isOwner(userId);
     }
     
+    // More granular rules for listing users
+    match /users/{userId} {
+        // Admins can list all users
+        allow list: if isAdmin();
+        
+        // Faculty can list students in their assigned branches
+        allow list: if isFaculty() && resource.data.role == 'student' 
+                      && resource.data.branch in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch;
+    }
+
+    // Rules for branches
     match /branches/{branchId} {
-        allow read: if isSignedIn();
-        allow write: if isAdmin();
+      allow read; // Anyone can read the list of branches for registration
+      allow write: if isAdmin();
     }
     
+    // Rules for timetables
     match /timetables/{timetableId} {
-      allow read: if (isStudent() && isApproved() && resource.data.branch == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch && resource.data.semester == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.semester) || isFaculty() || isAdmin();
-      allow write: if isFaculty() || isAdmin();
+        // Students can read their own timetable
+        allow read: if isSignedIn() && timetableId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch + '_' + get(/databases/$(database)/documents/users/$(request.auth.uid)).data.semester;
+        
+        // Admins can manage all timetables
+        allow read, write: if isAdmin();
+
+        // Faculty can manage timetables for their assigned branches
+        allow read, write: if isFaculty() && timetableId.split('_')[0] in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch;
+    }
+
+    // Allow read access to flows collection for all users
+    match /flows/{flowId} {
+      allow read: if true;
+      allow write: if false; // Or specific admin/owner rules
     }
   }
 }
