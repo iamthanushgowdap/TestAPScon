@@ -120,7 +120,7 @@ export default function RegisterPage() {
         } else if (errorCode === 'auth/weak-password') {
             errorMessage = 'The password is too weak. Please choose a stronger password.';
         } else if (errorCode === 'permission-denied') {
-            errorMessage = 'You do not have permission to perform this action. This could be due to a USN conflict. Please check your USN and try again.';
+             errorMessage = "Your registration was blocked. This may be due to a USN conflict. Please verify your details and try again. If the problem persists, contact an administrator.";
         }
         
         toast({
@@ -247,4 +247,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-    
