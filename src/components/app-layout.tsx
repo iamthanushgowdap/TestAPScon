@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { BotMessageSquare, BookCopy, LayoutDashboard, ListTodo, GraduationCap, Bell, CalendarClock, PieChart, User as UserIcon, LogOut } from 'lucide-react';
+import { BotMessageSquare, BookCopy, LayoutDashboard, ListTodo, GraduationCap, Bell, CalendarClock, PieChart, User as UserIcon, LogOut, CalendarDays } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -36,7 +36,7 @@ import BottomNavigation from './bottom-navigation';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/schedule', label: 'Schedule', icon: CalendarClock },
+  { href: '/timetable', label: 'Timetable', icon: CalendarDays },
   { href: '/attendance', label: 'Attendance', icon: PieChart },
   { href: '/tasks', label: 'Tasks', icon: ListTodo },
   { href: '/resources', label: 'Resources', icon: BookCopy },

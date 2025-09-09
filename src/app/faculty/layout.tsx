@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { BotMessageSquare, LayoutDashboard, Users, Upload, ClipboardCheck, Megaphone, GraduationCap, Bell, User as UserIcon, LogOut, UserCheck } from 'lucide-react';
+import { BotMessageSquare, LayoutDashboard, Users, Upload, ClipboardCheck, Megaphone, GraduationCap, Bell, User as UserIcon, LogOut, UserCheck, CalendarDays } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -37,6 +37,7 @@ const navItems = [
   { href: '/faculty/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/faculty/approve-students', label: 'Approve Students', icon: UserCheck },
   { href: '/faculty/student-management', label: 'Student Management', icon: Users },
+  { href: '/faculty/timetable', label: 'Timetable', icon: CalendarDays },
   { href: '#', label: 'Assignments', icon: Upload },
   { href: '#', label: 'Attendance', icon: ClipboardCheck },
   { href: '#', label: 'Announcements', icon: Megaphone },
