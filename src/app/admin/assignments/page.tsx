@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, PlusCircle, Edit, Trash2, Download, FileText, Calendar as CalendarIcon, User } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
@@ -143,8 +143,8 @@ export default function AdminAssignmentsPage() {
 
             const dataToSave = {
                 ...currentAssignment,
-                documentURL,
-                documentName,
+                documentURL: documentURL || '',
+                documentName: documentName || '',
                 facultyId: currentUser.uid,
                 facultyName: currentUser.displayName || 'Admin',
             };
@@ -306,3 +306,5 @@ export default function AdminAssignmentsPage() {
         </div>
     );
 }
+
+    
