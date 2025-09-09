@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Upload, PlusCircle, Edit, Trash2, Download, FileText, Calendar as CalendarIcon, User } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
-import { collection, onSnapshot, doc, deleteDoc, addDoc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, addDoc, updateDoc, serverTimestamp, getDocs, setDoc } from 'firebase/firestore';
 import { db, auth, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -111,15 +111,17 @@ export default function AdminAssignmentsPage() {
     };
 
     const handleDelete = async (assignment: Assignment) => {
-        try {
-            await deleteDoc(doc(db, "assignments", assignment.id));
-            if (assignment.documentURL) {
-                const fileRef = ref(storage, `assignments/${assignment.id}/${assignment.documentName}`);
-                await deleteObject(fileRef);
+        if (window.confirm("Are you sure you want to delete this assignment?")) {
+            try {
+                await deleteDoc(doc(db, "assignments", assignment.id));
+                if (assignment.documentURL && assignment.documentName) {
+                    const fileRef = ref(storage, `assignments/${assignment.id}/${assignment.documentName}`);
+                    await deleteObject(fileRef);
+                }
+                toast({ title: "Success", description: "Assignment deleted successfully." });
+            } catch (error) {
+                toast({ title: "Error", description: "Failed to delete assignment.", variant: "destructive" });
             }
-            toast({ title: "Success", description: "Assignment deleted successfully." });
-        } catch (error) {
-            toast({ title: "Error", description: "Failed to delete assignment.", variant: "destructive" });
         }
     };
 
@@ -133,8 +135,13 @@ export default function AdminAssignmentsPage() {
             let documentURL = currentAssignment.documentURL || '';
             let documentName = currentAssignment.documentName || '';
 
+            const docRef = isEditMode 
+                ? doc(db, 'assignments', currentAssignment.id!)
+                : doc(collection(db, 'assignments'));
+            
+            const docId = docRef.id;
+
             if (file) {
-                const docId = isEditMode ? currentAssignment.id! : doc(collection(db, 'assignments')).id;
                 const storageRef = ref(storage, `assignments/${docId}/${file.name}`);
                 await uploadBytes(storageRef, file);
                 documentURL = await getDownloadURL(storageRef);
@@ -143,6 +150,7 @@ export default function AdminAssignmentsPage() {
 
             const dataToSave = {
                 ...currentAssignment,
+                id: docId,
                 documentURL: documentURL || '',
                 documentName: documentName || '',
                 facultyId: currentUser.uid,
@@ -150,11 +158,10 @@ export default function AdminAssignmentsPage() {
             };
 
             if (isEditMode) {
-                const docRef = doc(db, 'assignments', currentAssignment.id!);
                 await updateDoc(docRef, dataToSave);
                 toast({ title: "Success", description: "Assignment updated." });
             } else {
-                await addDoc(collection(db, "assignments"), {
+                await setDoc(docRef, {
                     ...dataToSave,
                     createdAt: serverTimestamp()
                 });
@@ -216,7 +223,7 @@ export default function AdminAssignmentsPage() {
                                     <CardContent className="text-sm text-muted-foreground flex-grow">
                                         {a.description}
                                     </CardContent>
-                                    <CardFooter className="flex justify-between items-center text-xs">
+                                    <CardFooter className="flex justify-between items-center text-xs pt-4">
                                         <div className="flex items-center gap-1">
                                             <User className="h-3 w-3" /> {a.facultyName}
                                         </div>
