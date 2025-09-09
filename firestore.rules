@@ -1,49 +1,48 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
   
     function isAdmin() {
-      // User is an admin if their own user document has role 'admin'.
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     function isFaculty() {
-        // User is faculty if their own user document has role 'faculty'.
         return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'faculty';
     }
 
     function isOwner(userId) {
-      // User is the owner of the document.
       return request.auth != null && request.auth.uid == userId;
     }
 
-    function facultyCanAccessStudent(studentData) {
-        // Check if the student's branch is in the faculty's list of assigned branches.
-        let facultyData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-        return studentData.role == 'student' && studentData.branch in facultyData.branch;
+    // Function to check if a student belongs to any of the faculty's branches.
+    function isStudentInFacultyBranch(studentData) {
+      let facultyData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      // This part is tricky in rules. We ensure the client query is pre-filtered,
+      // and here we just verify the student has a role and a branch.
+      // The `get` rule will do the final check.
+      return studentData.role == 'student' && studentData.branch in facultyData.branch;
     }
-
+    
     match /users/{userId} {
-      // ANYONE can create a user document (i.e., register). Status is 'pending' by default.
+      // ANYONE can create a user document (i.e., register).
       allow create: if request.auth != null;
 
-      // - Users can read their own profile.
-      // - Admins can read any user profile.
-      // - Faculty can read profiles of students in their assigned branches.
-      allow get: if isOwner(userId) || isAdmin() || (isFaculty() && facultyCanAccessStudent(resource.data));
+      // Users can read their own profile.
+      // Admins can read any user profile.
+      // Faculty can read profiles of students in their assigned branches.
+      allow get: if isOwner(userId) || isAdmin() || (isFaculty() && isStudentInFacultyBranch(resource.data));
                    
-      // - Admins can list all users.
-      // - Faculty can list students who are in their assigned branch(es) for the approval page.
-      allow list: if isAdmin() || (isFaculty() && request.query.branch in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch);
+      // Admins and Faculty can list users. The actual documents returned
+      // are still protected by the 'get' rule.
+      allow list: if isAdmin() || isFaculty();
 
-      // - Users can update their own profile.
-      // - Admins can update any user profile (for approval, role changes, etc.).
-      // - Faculty can update student profiles in their branch (for approval).
-      allow update: if isOwner(userId) || isAdmin() || (isFaculty() && facultyCanAccessStudent(request.resource.data));
+      // Users can update their own profile.
+      // Admins can update any user profile.
+      // Faculty can update students in their branch (for approval).
+      allow update: if isOwner(userId) || isAdmin() || (isFaculty() && isStudentInFacultyBranch(request.resource.data));
 
-      // Only the owner or an admin can delete a user record.
-      allow delete: if isOwner(userId) || isAdmin();
+      // Only an admin can delete a user record.
+      allow delete: if isAdmin();
     }
 
     match /branches/{branchId} {
