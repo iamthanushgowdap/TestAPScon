@@ -3,14 +3,14 @@
 
 import { useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Bookmark, PlusSquare, User, Settings, CalendarDays } from 'lucide-react';
+import { Home, Bookmark, PlusSquare, User, Settings, CalendarDays, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import '@/styles/bottom-navigation.css';
 
 const navItems = [
   { href: '/dashboard', icon: Home, id: 'home-icon' },
   { href: '/timetable', icon: CalendarDays, id: 'timetable-icon' },
-  { href: '/tasks', icon: PlusSquare, id: 'plus-icon' },
+  { href: '/assignments', icon: Upload, id: 'assignments-icon' },
   { href: '/profile?role=student', icon: User, id: 'user-icon' },
   { href: '/chat', icon: Settings, id: 'settings-icon' },
 ];

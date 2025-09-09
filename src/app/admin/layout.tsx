@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { BotMessageSquare, LayoutDashboard, Users, Shield, Database, Megaphone, GraduationCap, Bell, BarChart, FileText, UserCheck, User as UserIcon, LogOut, Briefcase, Network, CalendarDays } from 'lucide-react';
+import { BotMessageSquare, LayoutDashboard, Users, Shield, Database, Megaphone, GraduationCap, Bell, BarChart, FileText, UserCheck, User as UserIcon, LogOut, Briefcase, Network, CalendarDays, Upload } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -43,6 +43,7 @@ const navItems = [
   { href: '/admin/faculty-management', label: 'Faculty Management', icon: Briefcase },
   { href: '/admin/branch-management', label: 'Branch Management', icon: Network },
   { href: '/admin/timetable', label: 'Timetable', icon: CalendarDays },
+  { href: '/admin/assignments', label: 'Assignments', icon: Upload },
   { href: '#', label: 'Security', icon: Shield },
   { href: '#', 'label': 'Database', 'icon': Database },
   { href: '#', 'label': 'Analytics', 'icon': BarChart },
