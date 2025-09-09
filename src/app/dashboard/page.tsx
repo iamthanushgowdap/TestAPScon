@@ -12,12 +12,14 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
 
-const scheduleItems = [
-    { time: '09:00 AM', subject: 'Physics 101', location: 'Hall C' },
-    { time: '11:00 AM', subject: 'Calculus II', location: 'Room 204' },
-    { time: '02:00 PM', subject: 'Intro to AI', location: 'Lab A' },
-];
+interface ScheduleItem {
+    time: string;
+    subject: string;
+    location: string;
+    startTime?: string;
+}
 
 const assignmentItems = [
     { title: 'Lab Report 3', subject: 'Physics 101', dueDate: 'Tomorrow' },
@@ -27,7 +29,9 @@ const assignmentItems = [
 export default function DashboardPage() {
     const [user, setUser] = useState<User | null>(null);
     const [userName, setUserName] = useState<string | null>(null);
+    const [todaysSchedule, setTodaysSchedule] = useState<ScheduleItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingSchedule, setLoadingSchedule] = useState(true);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -35,12 +39,34 @@ export default function DashboardPage() {
                 setUser(currentUser);
                 const userDocRef = doc(db, 'users', currentUser.uid);
                 const userDocSnap = await getDoc(userDocRef);
+
                 if (userDocSnap.exists()) {
                     const userData = userDocSnap.data();
                     setUserName(userData.name || currentUser.displayName);
+                    
+                    // Fetch timetable
+                    if (userData.branch && userData.semester) {
+                        const timetableDocId = `${userData.branch}_${userData.semester}`;
+                        const timetableDocRef = doc(db, 'timetables', timetableDocId);
+                        const timetableDocSnap = await getDoc(timetableDocRef);
+
+                        if (timetableDocSnap.exists()) {
+                            const timetableData = timetableDocSnap.data().schedule;
+                            const today = format(new Date(), 'EEEE'); // e.g., "Monday"
+                            const scheduleForToday = timetableData[today] || [];
+                            
+                            const formattedSchedule = scheduleForToday.map((item: any) => ({
+                                ...item,
+                                time: `${item.startTime} - ${item.endTime}`
+                            })).sort((a: ScheduleItem, b: ScheduleItem) => a.startTime!.localeCompare(b.startTime!));
+
+                            setTodaysSchedule(formattedSchedule);
+                        }
+                    }
                 } else {
                     setUserName(currentUser.displayName);
                 }
+                setLoadingSchedule(false);
             } else {
                 setUser(null);
                 setUserName(null);
@@ -104,15 +130,25 @@ export default function DashboardPage() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    {scheduleItems.map(item => (
-                                        <div key={item.time} className="flex items-center">
-                                            <Clock className="h-4 w-4 mr-3 text-muted-foreground" />
-                                            <div>
-                                                <p className="font-semibold">{item.subject}</p>
-                                                <p className="text-sm text-muted-foreground">{item.time} - {item.location}</p>
+                                    {loadingSchedule ? (
+                                        <>
+                                            <Skeleton className="h-12 w-full" />
+                                            <Skeleton className="h-12 w-full" />
+                                            <Skeleton className="h-12 w-full" />
+                                        </>
+                                    ) : todaysSchedule.length > 0 ? (
+                                        todaysSchedule.map(item => (
+                                            <div key={item.time} className="flex items-center">
+                                                <Clock className="h-4 w-4 mr-3 text-muted-foreground" />
+                                                <div>
+                                                    <p className="font-semibold">{item.subject}</p>
+                                                    <p className="text-sm text-muted-foreground">{item.time} - {item.location}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))
+                                    ) : (
+                                        <p className="text-muted-foreground text-sm text-center py-4">No classes scheduled for today. Enjoy your day!</p>
+                                    )}
                                 </CardContent>
                             </Card>
 
