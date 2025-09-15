@@ -1,50 +1,63 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check user role
+    // Helper functions
+    function isAuth() {
+      return request.auth != null;
+    }
+
     function isRole(role) {
-      return get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == role;
+      return isAuth() && get(/databases/{database}/documents/users/$(request.auth.uid)).data.role == role;
     }
     
-    function isRoleIn(roles) {
-      return get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in roles;
+    function isOneOfRoles(roles) {
+      return isAuth() && get(/databases/{database}/documents/users/$(request.auth.uid)).data.role in roles;
     }
 
-    // Users can read their own data, admins can read/write any user data.
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
+    // Collection: users
     match /users/{userId} {
-      allow read, update: if request.auth.uid == userId;
-      allow list, create, delete: if isRole('admin');
+      allow read: if isAuth();
+      allow create: if !isAuth(); // For registration
+      allow update: if isOwner(userId) || isOneOfRoles(['admin']);
+      allow delete: if isOneOfRoles(['admin']);
+    }
+
+    // Collection: branches
+    match /branches/{branchId} {
+      allow read: if true; // Publicly readable for registration
+      allow write: if isOneOfRoles(['admin']);
+    }
+
+    // Collection: assignments
+    match /assignments/{assignmentId} {
+      allow read: if isAuth();
+      allow write: if isOneOfRoles(['admin', 'faculty']);
     }
     
-    // Branches can be read by anyone (for registration), but only written by admins.
-    match /branches/{branchId} {
-      allow read: if true;
-      allow write: if isRole('admin');
-    }
-
-    // Timetables can be read by students/faculty, written by admins/faculty
+    // Collection: timetables
     match /timetables/{timetableId} {
-      allow read: if request.auth != null;
-      allow write: if isRoleIn(['admin', 'faculty']);
+      allow read: if isAuth();
+      allow write: if isOneOfRoles(['admin', 'faculty']);
+    }
+    
+    // Collection: attendance
+    match /attendance/{attendanceId} {
+      allow read: if isAuth() && 
+                    (isOneOfRoles(['admin', 'faculty']) || 
+                     (resource.data.branch == get(/databases/{database}/documents/users/$(request.auth.uid)).data.branch &&
+                      resource.data.semester == get(/databases/{database}/documents/users/$(request.auth.uid)).data.semester));
+      allow write: if isOneOfRoles(['admin', 'faculty']);
     }
 
-    // Assignments can be read by any authenticated user, but only created/edited/deleted by faculty or admin
-    match /assignments/{assignmentId} {
-        allow read: if request.auth != null;
-        allow write: if isRoleIn(['admin', 'faculty']);
-    }
-
-    // Attendance can be written by faculty/admin. Students can only read records for their class.
-    match /attendance/{recordId} {
-      allow read: if request.auth != null &&
-                  (isRoleIn(['admin', 'faculty']) ||
-                   (isRole('student') &&
-                    resource.data.branch == get(/databases/(default)/documents/users/$(request.auth.uid)).data.branch &&
-                    resource.data.semester == get(/databases/(default)/documents/users/$(request.auth.uid)).data.semester));
-      allow write: if isRoleIn(['admin', 'faculty']);
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
