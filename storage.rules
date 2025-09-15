@@ -2,21 +2,27 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Rules for profile pictures
+    // ==========================
+    // Profile Pictures
+    // ==========================
     match /profile-pictures/{userId}/{fileName} {
-      // Anyone can read profile pictures
+      // Anyone can view profile pictures
       allow read: if true;
-      // Only the authenticated user can write to their own profile picture path
+
+      // Only the owner can upload/update/delete their own profile picture
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Rules for assignment attachments
-    match /assignments/{assignmentId}/{allPaths=**} {
-      // Any authenticated user can read assignment files
+    // ==========================
+    // Assignments
+    // ==========================
+    match /assignments/{allPaths=**} {
+      // Any authenticated user (student, faculty, etc.) can read assignment files.
       allow read: if request.auth != null;
-      
-      // Only users with the role 'faculty' or 'admin' can write (upload, update, delete)
-      allow write: if request.auth != null && get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['faculty', 'admin'];
+
+      // Only users with a 'faculty' or 'admin' role in Firestore can write files.
+      allow write: if request.auth != null &&
+                   get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['faculty', 'admin'];
     }
   }
 }
