@@ -1,15 +1,40 @@
-
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
-    match /assignments/{assignmentId}/{allPaths=**} {
-      // Allow read access for any authenticated user (e.g., students)
+
+    // ==========================
+    // Profile Pictures
+    // ==========================
+    match /profile-pictures/{userId}/{fileName} {
+      // Anyone can view profile pictures
+      allow read: if true;
+
+      // Only the owner can upload/update/delete their own profile picture
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ==========================
+    // Assignments (root folder)
+    // ==========================
+    match /assignments/{allPaths=**} {
+      // All authenticated users (students, faculty, admin) can read assignments
       allow read: if request.auth != null;
-      
-      // Allow write access only for the faculty member who created the assignment.
-      // This rule checks the 'facultyId' field in the corresponding Firestore document.
-      allow write: if request.auth != null && get(/databases/(default)/documents/assignments/$(assignmentId)).data.facultyId == request.auth.uid;
+
+      // Only faculty and admins can upload/write
+      allow write: if request.auth != null &&
+                   get(/databases/(default)/documents/users/$(request.auth.uid)).data.role
+                   in ['faculty', 'admin'];
+    }
+
+    // ==========================
+    // (Optional) Faculty-specific folder
+    // In case your code uploads under /faculty/assignments/...
+    // ==========================
+    match /faculty/assignments/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+                   get(/databases/(default)/documents/users/$(request.auth.uid)).data.role
+                   in ['faculty', 'admin'];
     }
   }
 }
