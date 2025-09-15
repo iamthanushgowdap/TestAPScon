@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import AnimatedSearchBar from '@/components/animated-search-bar';
 
 
 type StudentStatus = 'pending' | 'approved' | 'declined';
@@ -235,12 +236,10 @@ export default function StudentManagementPage() {
                         A complete list of all students in your branch(es).
                     </CardDescription>
                     <div className="relative pt-2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input 
-                            placeholder="Search by name, email, or USN..." 
-                            className="pl-10"
+                        <AnimatedSearchBar
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Search by name, email, or USN..."
                         />
                     </div>
                 </CardHeader>
@@ -257,5 +256,3 @@ export default function StudentManagementPage() {
         </div>
     );
 }
-
-    

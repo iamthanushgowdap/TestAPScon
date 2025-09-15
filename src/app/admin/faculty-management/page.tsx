@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import AnimatedSearchBar from '@/components/animated-search-bar';
 
 
 interface Branch {
@@ -398,12 +399,10 @@ export default function FacultyManagementPage() {
                        A complete list of all faculty in the system.
                     </CardDescription>
                      <div className="relative pt-2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input 
-                            placeholder="Search by name or email..." 
-                            className="pl-10" 
+                        <AnimatedSearchBar
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
+                            placeholder="Search by name or email..."
                         />
                     </div>
                 </CardHeader>
@@ -578,5 +577,3 @@ export default function FacultyManagementPage() {
         </div>
     );
 }
-
-    

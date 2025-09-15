@@ -35,6 +35,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
+import AnimatedSearchBar from '@/components/animated-search-bar';
 
 
 interface Branch {
@@ -266,12 +267,10 @@ export default function BranchManagementPage() {
                        Manage branches available for faculty and student registration.
                     </CardDescription>
                      <div className="relative pt-2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input 
-                            placeholder="Search by name..." 
-                            className="pl-10" 
+                        <AnimatedSearchBar 
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
+                            placeholder="Search by name..."
                         />
                     </div>
                 </CardHeader>
@@ -327,5 +326,3 @@ export default function BranchManagementPage() {
         </div>
     );
 }
-
-    

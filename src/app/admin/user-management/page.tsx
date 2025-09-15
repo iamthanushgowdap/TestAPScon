@@ -26,6 +26,7 @@ import {
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import AnimatedSearchBar from '@/components/animated-search-bar';
 
 
 type UserRole = 'student' | 'faculty' | 'admin';
@@ -298,12 +299,10 @@ export default function UserManagementPage() {
                         A complete list of students, faculty, and administrators.
                     </CardDescription>
                      <div className="relative pt-2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input 
-                            placeholder="Search by name, email, or USN..." 
-                            className="pl-10" 
+                        <AnimatedSearchBar
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
+                            placeholder="Search by name, email, or USN..."
                         />
                     </div>
                 </CardHeader>
@@ -320,5 +319,3 @@ export default function UserManagementPage() {
         </div>
     );
 }
-
-    
