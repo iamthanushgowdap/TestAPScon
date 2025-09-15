@@ -49,7 +49,7 @@ export default function AnimatedPasswordInput({ id = 'password', ...props }: Ani
         // Change to password (close eye)
          gsap.timeline({ onComplete: () => { busy = false; }})
           .to(UPPER_LID, { attr: { d: 'M1 12C1 12 5 4 12 4C19 4 23 12 23 12' } , duration })
-          .to(LOWER_ID, { attr: { d: 'M1 12C1 12 5 20 12 20C19 20 23 12 23 12' } , duration }, 0)
+          .to(LOWER_LID, { attr: { d: 'M1 12C1 12 5 20 12 20C19 20 23 12 23 12' } , duration }, 0)
           .to(EYE, { scale: 1, duration: duration, transformOrigin: 'center center' }, 0)
           .add(() => { INPUT.type = 'password'; });
       }
