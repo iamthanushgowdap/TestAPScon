@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -25,13 +26,12 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  "w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow-sm dark:bg-gray-800 dark:text-gray-400",
+  "w-full max-w-xs p-4 rounded-lg shadow-lg border",
   {
     variants: {
       variant: {
-        default: "dark:bg-gray-800 bg-white",
-        destructive:
-          "dark:bg-red-900/50 bg-red-100 border-red-500/50 text-red-700 dark:text-red-200",
+        default: "bg-card text-card-foreground border-border",
+        destructive: "border-destructive/50 text-destructive bg-destructive/10",
       },
     },
     defaultVariants: {
@@ -51,10 +51,10 @@ const Toast = React.forwardRef<
       className={cn(toastVariants({ variant }), className)}
       {...props}
     >
-      <div className="flex">
+      <div className="flex w-full">
         {icon && (
-           <div className={cn("inline-flex items-center justify-center shrink-0 w-8 h-8 text-blue-500 bg-blue-100 rounded-lg dark:text-blue-300 dark:bg-blue-900",
-            variant === 'destructive' && "text-red-500 bg-red-100 dark:text-red-300 dark:bg-red-900"
+           <div className={cn("inline-flex items-center justify-center shrink-0 w-8 h-8 rounded-lg",
+            variant === 'destructive' ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
            )}>
               {icon}
               <span className="sr-only">Icon</span>
@@ -63,9 +63,9 @@ const Toast = React.forwardRef<
         <div className="ms-3 text-sm font-normal w-full">
           {children}
         </div>
-        <ToastPrimitives.Close className="ms-auto -mx-1.5 -my-1.5 bg-white items-center justify-center shrink-0 text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex h-8 w-8 dark:text-gray-500 dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700">
+        <ToastPrimitives.Close className="ms-auto -mx-1.5 -my-1.5 bg-transparent items-center justify-center shrink-0 text-muted-foreground hover:text-foreground rounded-lg focus:ring-2 focus:ring-ring p-1.5 hover:bg-accent inline-flex h-8 w-8">
             <span className="sr-only">Close</span>
-            <X className="w-3 h-3" />
+            <X className="w-4 h-4" />
         </ToastPrimitives.Close>
       </div>
     </ToastPrimitives.Root>
@@ -113,7 +113,7 @@ const ToastTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Title
     ref={ref}
-    className={cn("mb-1 text-sm font-semibold text-gray-900 dark:text-white", className)}
+    className={cn("mb-1 text-sm font-semibold text-foreground", className)}
     {...props}
   />
 ))
@@ -125,7 +125,7 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn("mb-2 text-sm font-normal", className)}
+    className={cn("mb-2 text-sm font-normal text-muted-foreground", className)}
     {...props}
   />
 ))
