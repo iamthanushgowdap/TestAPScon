@@ -39,7 +39,7 @@ const navItems = [
   { href: '/faculty/student-management', label: 'Student Management', icon: Users },
   { href: '/faculty/timetable', label: 'Timetable', icon: CalendarDays },
   { href: '/faculty/assignments', label: 'Assignments', icon: Upload },
-  { href: '#', label: 'Attendance', icon: ClipboardCheck },
+  { href: '/faculty/attendance', label: 'Attendance', icon: ClipboardCheck },
   { href: '#', label: 'Announcements', icon: Megaphone },
   { href: '/chat', label: 'Cera.AI', icon: BotMessageSquare },
 ];

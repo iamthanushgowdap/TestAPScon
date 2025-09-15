@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Bot, BookCopy, ListTodo, Calendar, Clock, FileText, Wallet, Percent, PartyPopper, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -34,6 +34,9 @@ export default function DashboardPage() {
     const [todaysSchedule, setTodaysSchedule] = useState<ScheduleItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingSchedule, setLoadingSchedule] = useState(true);
+    const [overallAttendance, setOverallAttendance] = useState(0);
+    const [loadingAttendance, setLoadingAttendance] = useState(true);
+
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -46,29 +49,62 @@ export default function DashboardPage() {
                     const userData = userDocSnap.data();
                     setUserName(userData.name || currentUser.displayName);
                     
-                    // Fetch timetable
                     if (userData.branch && userData.semester) {
+                        // Fetch timetable
                         const timetableDocId = `${userData.branch}_${userData.semester}`;
                         const timetableDocRef = doc(db, 'timetables', timetableDocId);
-                        const timetableDocSnap = await getDoc(timetableDocRef);
+                        getDoc(timetableDocRef).then(timetableDocSnap => {
+                             if (timetableDocSnap.exists()) {
+                                const timetableData = timetableDocSnap.data().schedule;
+                                const today = format(new Date(), 'EEEE'); // e.g., "Monday"
+                                const scheduleForToday = timetableData[today] || [];
+                                
+                                const formattedSchedule = scheduleForToday.map((item: any) => ({
+                                    ...item,
+                                    time: `${item.startTime} - ${item.endTime}`
+                                })).sort((a: ScheduleItem, b: ScheduleItem) => a.startTime!.localeCompare(b.startTime!));
 
-                        if (timetableDocSnap.exists()) {
-                            const timetableData = timetableDocSnap.data().schedule;
-                            const today = format(new Date(), 'EEEE'); // e.g., "Monday"
-                            const scheduleForToday = timetableData[today] || [];
+                                setTodaysSchedule(formattedSchedule);
+                            }
+                            setLoadingSchedule(false);
+                        });
+
+                        // Fetch attendance
+                        const q = query(
+                            collection(db, "attendance"),
+                            where("branch", "==", userData.branch),
+                            where("semester", "==", userData.semester)
+                        );
+                        
+                        onSnapshot(q, (snapshot) => {
+                            let totalPresent = 0;
+                            let totalClasses = 0;
                             
-                            const formattedSchedule = scheduleForToday.map((item: any) => ({
-                                ...item,
-                                time: `${item.startTime} - ${item.endTime}`
-                            })).sort((a: ScheduleItem, b: ScheduleItem) => a.startTime!.localeCompare(b.startTime!));
+                            snapshot.forEach(doc => {
+                                const data = doc.data();
+                                const studentStatus = data.attendees[currentUser.uid];
 
-                            setTodaysSchedule(formattedSchedule);
-                        }
+                                if (studentStatus) {
+                                    totalClasses++;
+                                    if (studentStatus === 'present') {
+                                        totalPresent++;
+                                    }
+                                }
+                            });
+                            
+                            setOverallAttendance(totalClasses > 0 ? Math.round((totalPresent / totalClasses) * 100) : 0);
+                            setLoadingAttendance(false);
+                        });
+
+                    } else {
+                        setLoadingSchedule(false);
+                        setLoadingAttendance(false);
                     }
                 } else {
                     setUserName(currentUser.displayName);
+                    setLoadingSchedule(false);
+                    setLoadingAttendance(false);
                 }
-                setLoadingSchedule(false);
             } else {
                 setUser(null);
                 setUserName(null);
@@ -190,32 +226,34 @@ export default function DashboardPage() {
                                 <CardTitle>Attendance</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="relative h-32 w-32 mx-auto">
-                                    <svg className="w-full h-full" viewBox="0 0 36 36">
-                                        <path
-                                            className="stroke-current text-secondary"
-                                            d="M18 2.0845
-                                            a 15.9155 15.9155 0 0 1 0 31.831
-                                            a 15.9155 15.9155 0 0 1 0 -31.831"
-                                            fill="none"
-                                            strokeWidth="3"
-                                        />
-                                        <path
-                                            className="stroke-current text-primary"
-                                            strokeDasharray="85, 100"
-                                            d="M18 2.0845
-                                            a 15.9155 15.9155 0 0 1 0 31.831
-                                            a 15.9155 15.9155 0 0 1 0 -31.831"
-                                            fill="none"
-                                            strokeWidth="3"
-                                            strokeLinecap="round"
-                                        />
-                                    </svg>
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                        <span className="text-3xl font-bold">85%</span>
-                                        <Percent className="h-4 w-4 text-muted-foreground" />
+                                {loadingAttendance ? <Skeleton className="h-32 w-32 rounded-full mx-auto" /> : (
+                                    <div className="relative h-32 w-32 mx-auto">
+                                        <svg className="w-full h-full" viewBox="0 0 36 36">
+                                            <path
+                                                className="stroke-current text-secondary"
+                                                d="M18 2.0845
+                                                a 15.9155 15.9155 0 0 1 0 31.831
+                                                a 15.9155 15.9155 0 0 1 0 -31.831"
+                                                fill="none"
+                                                strokeWidth="3"
+                                            />
+                                            <path
+                                                className="stroke-current text-primary transition-all duration-500"
+                                                strokeDasharray={`${overallAttendance}, 100`}
+                                                d="M18 2.0845
+                                                a 15.9155 15.9155 0 0 1 0 31.831
+                                                a 15.9155 15.9155 0 0 1 0 -31.831"
+                                                fill="none"
+                                                strokeWidth="3"
+                                                strokeLinecap="round"
+                                            />
+                                        </svg>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                            <span className="text-3xl font-bold">{overallAttendance}%</span>
+                                            <Percent className="h-4 w-4 text-muted-foreground" />
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                                 <p className="text-sm text-muted-foreground mt-3">Great standing!</p>
                             </CardContent>
                         </Card>
