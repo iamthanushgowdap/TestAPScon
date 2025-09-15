@@ -1,21 +1,15 @@
+
 rules_version = '2';
 
-// 1. All files are readable by anyone.
-// 2. Profile pictures can only be uploaded by the owner.
-// 3. Assignment files can only be uploaded by faculty or admins.
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow any authenticated user to upload their own profile picture
-    match /profile-pictures/{userId}/{fileName} {
-      allow read;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow faculty and admins to upload assignments.
-    // Allow anyone to read assignments.
-    match /assignments/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['faculty', 'admin'];
+    match /assignments/{assignmentId}/{allPaths=**} {
+      // Allow read access for any authenticated user (e.g., students)
+      allow read: if request.auth != null;
+      
+      // Allow write access only for the faculty member who created the assignment.
+      // This rule checks the 'facultyId' field in the corresponding Firestore document.
+      allow write: if request.auth != null && get(/databases/(default)/documents/assignments/$(assignmentId)).data.facultyId == request.auth.uid;
     }
   }
 }
