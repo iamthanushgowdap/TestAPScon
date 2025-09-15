@@ -52,11 +52,9 @@ export default function Sidebar({ navItems, userName, userJob, userImage, onLogo
                 </li>
                 {navItems.map((item) => (
                     <li key={item.href}>
-                        <Link href={item.href} legacyBehavior>
-                           <a className={pathname === item.href ? 'active' : ''}>
-                                <i className={`bx ${item.icon}`}></i>
-                                <span className="links_name">{item.label}</span>
-                            </a>
+                        <Link href={item.href} className={pathname === item.href ? 'active' : ''}>
+                            <i className={`bx ${item.icon}`}></i>
+                            <span className="links_name">{item.label}</span>
                         </Link>
                         <span className="tooltip">{item.label}</span>
                     </li>
