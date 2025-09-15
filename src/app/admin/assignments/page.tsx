@@ -42,6 +42,14 @@ interface Assignment {
 interface Branch { id: string; name: string; }
 const semesters = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
 
+function safeMillis(ts: any) {
+  if (!ts) return 0;
+  if (typeof ts.toMillis === "function") return ts.toMillis();
+  if (ts instanceof Date) return ts.getTime();
+  if (typeof ts === "number") return ts;
+  return 0;
+}
+
 export default function AdminAssignmentsPage() {
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [loading, setLoading] = useState(true);
@@ -73,7 +81,7 @@ export default function AdminAssignmentsPage() {
             const fetchedAssignments = snapshot.docs.map(doc => {
                 const data = doc.data();
                 return { id: doc.id, ...data, dueDate: data.dueDate.toDate() } as Assignment
-            }).sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+            }).sort((a,b) => safeMillis(b.createdAt) - safeMillis(a.createdAt));
             setAssignments(fetchedAssignments);
             setLoading(false);
         }, (error) => {
@@ -140,28 +148,31 @@ export default function AdminAssignmentsPage() {
             const docId = currentAssignment.id || doc(collection(db, 'assignments')).id;
             const assignmentRef = doc(db, "assignments", docId);
             
-            const metadataToSave = {
-                ...currentAssignment,
+            const metadataToSave: Omit<Assignment, 'documentURL' | 'documentName' | 'createdAt'> & { facultyId: string, facultyName: string, id: string, createdAt?: any } = {
+                title: currentAssignment.title,
+                description: currentAssignment.description || '',
+                dueDate: currentAssignment.dueDate,
+                branch: currentAssignment.branch,
+                semester: currentAssignment.semester,
+                subject: currentAssignment.subject,
                 id: docId,
                 facultyId: currentUser.uid,
                 facultyName: currentUser.displayName || 'Admin',
             };
 
-            // Don't save documentURL/Name in the first pass
-            delete metadataToSave.documentURL;
-            delete metadataToSave.documentName;
-
-            // In edit mode, if there's no new file, we want to preserve old file data.
             if(isEditMode && currentAssignment.documentURL) {
-                metadataToSave.documentURL = currentAssignment.documentURL;
-                metadataToSave.documentName = currentAssignment.documentName;
+                (metadataToSave as any).documentURL = currentAssignment.documentURL;
+                (metadataToSave as any).documentName = currentAssignment.documentName;
+            } else {
+                 (metadataToSave as any).documentURL = '';
+                 (metadataToSave as any).documentName = '';
             }
 
-            await setDoc(assignmentRef, {
-                ...metadataToSave,
-                // Add timestamp only for new assignments
-                ...(!isEditMode && {createdAt: serverTimestamp()})
-            }, { merge: true });
+            if (!isEditMode) {
+                metadataToSave.createdAt = serverTimestamp();
+            }
+
+            await setDoc(assignmentRef, metadataToSave, { merge: true });
 
             if (file) {
                 console.log("Uploading file:", file.name);
@@ -328,5 +339,3 @@ export default function AdminAssignmentsPage() {
         </div>
     );
 }
-
-    
