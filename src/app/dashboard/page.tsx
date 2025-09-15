@@ -120,6 +120,7 @@ export default function DashboardPage() {
     return (
         <AppLayout>
             <div className="p-4 sm:p-6 lg:p-8 space-y-8 relative">
+                <div className="text text-2xl font-bold">Dashboard</div>
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <div>

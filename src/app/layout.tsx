@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { cn } from '@/lib/utils';
+import '@/styles/sidebar.css';
 
 export const metadata: Metadata = {
   title: 'APSConnect: Cera.AI Companion',
@@ -19,7 +20,8 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap" rel="stylesheet" />
+        <link rel='stylesheet' href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 
       </head>
