@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -9,55 +10,81 @@ service cloud.firestore {
     }
 
     function isRole(role) {
-      return isAuth() && get(/databases/{database}/documents/users/$(request.auth.uid)).data.role == role;
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
     
     function isOneOfRoles(roles) {
-      return isAuth() && get(/databases/{database}/documents/users/$(request.auth.uid)).data.role in roles;
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles;
     }
-
+    
     function isOwner(userId) {
-      return isAuth() && request.auth.uid == userId;
+        return isAuth() && request.auth.uid == userId;
+    }
+    
+    function userHasBranch(branch) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch == branch;
+    }
+    
+    function studentData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Collection: users
+    // Users Collection
     match /users/{userId} {
-      allow read: if isAuth();
-      allow create: if !isAuth(); // For registration
-      allow update: if isOwner(userId) || isOneOfRoles(['admin']);
-      allow delete: if isOneOfRoles(['admin']);
+      // Anyone can create their own user document (for registration)
+      allow create: if isAuth();
+      
+      // Admins and Faculty can list users. Students can only read individual profiles.
+      allow list: if isOneOfRoles(['admin', 'faculty']);
+      allow get: if isAuth();
+      
+      // Only the user themselves or an admin can update their profile.
+      allow update: if isOwner(userId) || isRole('admin');
+      
+      // Only an admin can delete a user.
+      allow delete: if isRole('admin');
     }
 
-    // Collection: branches
+    // Branches Collection
     match /branches/{branchId} {
-      allow read: if true; // Publicly readable for registration
-      allow write: if isOneOfRoles(['admin']);
+      // Anyone can read branches (needed for registration dropdown)
+      allow read: if true;
+      // Only admins can write to branches
+      allow write: if isRole('admin');
     }
-
-    // Collection: assignments
+    
+    // Assignments Collection
     match /assignments/{assignmentId} {
+       // All authenticated users can read assignments.
       allow read: if isAuth();
+      // Only admins or faculty can create/update/delete assignments.
       allow write: if isOneOfRoles(['admin', 'faculty']);
     }
     
-    // Collection: timetables
+    // Timetables Collection
     match /timetables/{timetableId} {
-      allow read: if isAuth();
-      allow write: if isOneOfRoles(['admin', 'faculty']);
-    }
-    
-    // Collection: attendance
-    match /attendance/{attendanceId} {
-      allow read: if isAuth() && 
-                    (isOneOfRoles(['admin', 'faculty']) || 
-                     (resource.data.branch == get(/databases/{database}/documents/users/$(request.auth.uid)).data.branch &&
-                      resource.data.semester == get(/databases/{database}/documents/users/$(request.auth.uid)).data.semester));
+       // Students can only read their own timetable. Faculty/Admins can read all.
+      allow read: if isAuth() && (
+        isOneOfRoles(['admin', 'faculty']) ||
+        (timetableId == studentData().branch + '_' + studentData().semester)
+      );
+      // Only admins or faculty can write timetables.
       allow write: if isOneOfRoles(['admin', 'faculty']);
     }
 
-    // Deny all other access
-    match /{document=**} {
-      allow read, write: if false;
+    // Attendance Collection
+    match /attendance/{attendanceId} {
+      // Students can only query/read records matching their class. Faculty/Admins can read all.
+      allow list, get: if isAuth() && (
+        isOneOfRoles(['admin', 'faculty']) ||
+        (resource.data.branch == studentData().branch && resource.data.semester == studentData().semester)
+      );
+      
+      // Only Faculty/Admins can create or update attendance.
+      allow create, update: if isOneOfRoles(['admin', 'faculty']);
+      
+      // No one can delete attendance records for now to maintain history.
+      allow delete: if false;
     }
   }
 }
