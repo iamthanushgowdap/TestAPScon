@@ -11,15 +11,7 @@ import { db, auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { onAuthStateChanged, User } from 'firebase/auth';
-
-const attendanceData = [
-    { name: 'Jan', attendance: 88 },
-    { name: 'Feb', attendance: 92 },
-    { name: 'Mar', attendance: 95 },
-    { name: 'Apr', attendance: 85 },
-    { name: 'May', attendance: 91 },
-    { name: 'Jun', attendance: 94 },
-];
+import { format, subMonths, getMonth, getYear } from 'date-fns';
 
 const feeData = [
     { name: 'Paid', value: 800 },
@@ -32,12 +24,14 @@ const adminActions = [
     { title: "Manage User Roles", icon: Shield, href: "#" },
     { title: "Database Backup", icon: Database, href: "#" },
     { title: "Broadcast Announcement", icon: Megaphone, href: "#" },
-]
+];
 
 
 export default function AdminDashboardPage() {
     const [studentCount, setStudentCount] = useState(0);
     const [facultyCount, setFacultyCount] = useState(0);
+    const [averageAttendance, setAverageAttendance] = useState(0);
+    const [attendanceTrendData, setAttendanceTrendData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [permissionError, setPermissionError] = useState(false);
     const { toast } = useToast();
@@ -57,8 +51,7 @@ export default function AdminDashboardPage() {
         }
 
         const usersQuery = query(collection(db, 'users'));
-
-        const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
+        const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
             let students = 0;
             let faculty = 0;
             snapshot.forEach(doc => {
@@ -72,14 +65,14 @@ export default function AdminDashboardPage() {
             setStudentCount(students);
             setFacultyCount(faculty);
             setLoading(false);
-            setPermissionError(false); // Reset error on success
+            setPermissionError(false);
         }, (error) => {
             console.error(`Firestore error (users):`, error.message);
             if (error.message.includes('permission-denied')) {
-                if (!permissionError) { // Show toast only once
+                if (!permissionError) {
                      toast({
                         title: "Permission Denied",
-                        description: `Could not fetch user data. Please check your Firestore security rules.`,
+                        description: `Could not fetch user data.`,
                         variant: "destructive"
                     });
                     setPermissionError(true);
@@ -90,13 +83,73 @@ export default function AdminDashboardPage() {
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        const attendanceQuery = query(collection(db, 'attendance'));
+        const attendanceUnsubscribe = onSnapshot(attendanceQuery, (snapshot) => {
+            let totalPresent = 0;
+            let totalEntries = 0;
+            const monthlyData: { [key: string]: { present: number; total: number } } = {};
+
+            snapshot.forEach(doc => {
+                const record = doc.data();
+                const attendees = record.attendees || {};
+                const recordDate = new Date(record.date);
+
+                Object.values(attendees).forEach((status) => {
+                    totalEntries++;
+                    if (status === 'present') {
+                        totalPresent++;
+                    }
+                });
+                
+                const monthKey = format(recordDate, 'yyyy-MM');
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = { present: 0, total: 0 };
+                }
+                 Object.values(attendees).forEach((status) => {
+                    monthlyData[monthKey].total++;
+                    if (status === 'present') {
+                        monthlyData[monthKey].present++;
+                    }
+                });
+
+            });
+            
+            setAverageAttendance(totalEntries > 0 ? Math.round((totalPresent / totalEntries) * 100) : 0);
+
+            const trendData = [];
+            for (let i = 5; i >= 0; i--) {
+                const d = subMonths(new Date(), i);
+                const monthKey = format(d, 'yyyy-MM');
+                const data = monthlyData[monthKey];
+                trendData.push({
+                    name: format(d, 'MMM'),
+                    attendance: data && data.total > 0 ? Math.round((data.present / data.total) * 100) : 0,
+                });
+            }
+            setAttendanceTrendData(trendData as any);
+
+        }, (error) => {
+            console.error(`Firestore error (attendance):`, error.message);
+             if (error.message.includes('permission-denied')) {
+                 toast({
+                    title: "Permission Denied",
+                    description: `Could not fetch attendance data.`,
+                    variant: "destructive"
+                });
+             }
+        });
+
+
+        return () => {
+            usersUnsubscribe();
+            attendanceUnsubscribe();
+        }
     }, [currentUser, toast, permissionError]);
     
     const quickStats = [
         { title: "Total Students", value: studentCount.toString(), icon: Users, color: "text-blue-400" },
         { title: "Total Faculty", value: facultyCount.toString(), icon: Briefcase, color: "text-purple-400" },
-        { title: "Avg. Attendance", value: "92%", icon: Percent, color: "text-green-400" },
+        { title: "Avg. Attendance", value: `${averageAttendance}%`, icon: Percent, color: "text-green-400" },
         { title: "Fees Collected", value: "$1.2M", icon: Wallet, color: "text-yellow-400" },
     ];
 
@@ -127,7 +180,7 @@ export default function AdminDashboardPage() {
                             ) : (
                                 <div className="text-2xl font-bold">{stat.value}</div>
                             )}
-                            {permissionError && (stat.title === "Total Students" || stat.title === "Total Faculty") && (
+                            {permissionError && (stat.title.includes("Students") || stat.title.includes("Faculty") || stat.title.includes("Attendance")) && (
                                 <p className="text-xs text-destructive">Permission Denied</p>
                             )}
                         </CardContent>
@@ -146,7 +199,7 @@ export default function AdminDashboardPage() {
                         </CardHeader>
                         <CardContent>
                             <ResponsiveContainer width="100%" height={300}>
-                                <BarChart data={attendanceData}>
+                                <BarChart data={attendanceTrendData}>
                                     <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}%`}/>
                                     <Tooltip
