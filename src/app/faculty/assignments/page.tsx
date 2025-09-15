@@ -153,9 +153,8 @@ export default function FacultyAssignmentsPage() {
 
             const dataToSave = {
                 ...currentAssignment,
-                id: docId,
-                documentURL: documentURL || '',
-                documentName: documentName || '',
+                documentURL: documentURL,
+                documentName: documentName,
                 facultyId: currentUser.uid,
                 facultyName: currentUser.displayName || 'Faculty',
             };
@@ -166,6 +165,7 @@ export default function FacultyAssignmentsPage() {
             } else {
                 await setDoc(docRef, {
                     ...dataToSave,
+                    id: docId,
                     createdAt: serverTimestamp()
                 });
                 toast({ title: "Success", description: "New assignment added." });
