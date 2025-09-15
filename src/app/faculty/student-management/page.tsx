@@ -36,6 +36,11 @@ export default function StudentManagementPage() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [permissionError, setPermissionError] = useState(false);
     const isMobile = useIsMobile();
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     const fetchStudents = useCallback(async (user: User) => {
         setLoading(true);
@@ -240,7 +245,7 @@ export default function StudentManagementPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    {loading ? (
+                    {loading || !isClient ? (
                         <div className="space-y-4">
                              {[...Array(3)].map((_,i) => <Skeleton key={i} className="h-16 w-full" />)}
                         </div>
@@ -252,3 +257,5 @@ export default function StudentManagementPage() {
         </div>
     );
 }
+
+    

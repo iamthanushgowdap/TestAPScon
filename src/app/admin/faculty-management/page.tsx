@@ -69,6 +69,11 @@ export default function FacultyManagementPage() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [permissionError, setPermissionError] = useState(false);
     const isMobile = useIsMobile();
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
     
     // State for the dialog
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -403,7 +408,7 @@ export default function FacultyManagementPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    {loading ? (
+                    {loading || !isClient ? (
                         <div className="space-y-4">
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
                         </div>
@@ -573,3 +578,5 @@ export default function FacultyManagementPage() {
         </div>
     );
 }
+
+    

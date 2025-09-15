@@ -56,6 +56,11 @@ export default function BranchManagementPage() {
     const [currentBranch, setCurrentBranch] = useState<Partial<Branch>>({});
     const [isSaving, setIsSaving] = useState(false);
     const isMobile = useIsMobile();
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
 
     useEffect(() => {
@@ -271,7 +276,7 @@ export default function BranchManagementPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    {loading ? (
+                    {loading || !isClient ? (
                         <div className="space-y-4">
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
                         </div>
@@ -322,3 +327,5 @@ export default function BranchManagementPage() {
         </div>
     );
 }
+
+    
