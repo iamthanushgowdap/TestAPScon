@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import '@/styles/sidebar.css';
 import '@/styles/loader.css';
 import '@/styles/animated-search-bar.css';
+import '@/styles/animated-password-input.css';
 
 export const metadata: Metadata = {
   title: 'APSConnect: Cera.AI Companion',

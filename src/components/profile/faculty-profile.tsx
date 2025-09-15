@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import AnimatedPasswordInput from "../ui/animated-password-input";
 
 interface FacultyData {
     name: string;
@@ -262,15 +263,15 @@ export default function FacultyProfile() {
                                     <div className="grid gap-4 py-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="current-password">Current Password</Label>
-                                            <Input id="current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                                            <AnimatedPasswordInput id="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
                                         </div>
                                          <div className="space-y-2">
                                             <Label htmlFor="new-password">New Password</Label>
-                                            <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                                            <AnimatedPasswordInput id="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                                         </div>
                                          <div className="space-y-2">
                                             <Label htmlFor="confirm-new-password">Confirm New Password</Label>
-                                            <Input id="confirm-new-password" type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} />
+                                            <AnimatedPasswordInput id="confirm-new-password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} />
                                         </div>
                                     </div>
                                     <DialogFooter>

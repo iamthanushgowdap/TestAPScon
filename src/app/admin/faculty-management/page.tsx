@@ -40,6 +40,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import AnimatedSearchBar from '@/components/animated-search-bar';
+import AnimatedPasswordInput from '@/components/ui/animated-password-input';
 
 
 interface Branch {
@@ -448,14 +449,14 @@ export default function FacultyManagementPage() {
                         {!isEditMode && (
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="password" className="text-right">Password</Label>
-                                <Input 
-                                    id="password" 
-                                    type="password"
-                                    placeholder="Initial password for login"
-                                    value={currentFaculty.password || ''} 
-                                    onChange={(e) => setCurrentFaculty({...currentFaculty, password: e.target.value })}
-                                    className="col-span-3"
-                                />
+                                <div className="col-span-3">
+                                   <AnimatedPasswordInput 
+                                        id="password" 
+                                        placeholder="Initial password"
+                                        value={currentFaculty.password || ''}
+                                        onChange={(e) => setCurrentFaculty({...currentFaculty, password: e.target.value })}
+                                   />
+                                </div>
                             </div>
                         )}
                         <div className="grid grid-cols-4 items-center gap-4">

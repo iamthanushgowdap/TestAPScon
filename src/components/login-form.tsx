@@ -22,6 +22,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'fire
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useState } from 'react';
+import AnimatedPasswordInput from './ui/animated-password-input';
 
 export interface Role {
   name: 'Student' | 'Faculty' | 'Admin';
@@ -143,7 +144,7 @@ export function LoginForm({ role }: LoginFormProps) {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
+                  <AnimatedPasswordInput {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
