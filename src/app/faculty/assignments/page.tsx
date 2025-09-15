@@ -129,51 +129,66 @@ export default function FacultyAssignmentsPage() {
     };
 
     const handleSaveChanges = async () => {
-        if (!currentUser || !currentAssignment.title || !currentAssignment.branch || !currentAssignment.semester || !currentAssignment.subject || !currentAssignment.dueDate) {
-            toast({ title: "Error", description: "Please fill all required fields.", variant: "destructive" });
+        if (!currentUser) {
+            toast({ title: "Authentication Error", description: "You must be logged in to save an assignment.", variant: "destructive" });
             return;
         }
+         if (!currentAssignment.title || !currentAssignment.branch || !currentAssignment.semester || !currentAssignment.subject || !currentAssignment.dueDate) {
+            toast({ title: "Missing Fields", description: "Please fill all required fields.", variant: "destructive" });
+            return;
+        }
+
         setIsSaving(true);
         try {
-            let documentURL = currentAssignment.documentURL || '';
-            let documentName = currentAssignment.documentName || '';
+            const docId = currentAssignment.id || doc(collection(db, 'assignments')).id;
+            const assignmentRef = doc(db, "assignments", docId);
             
-            const docRef = isEditMode 
-                ? doc(db, 'assignments', currentAssignment.id!)
-                : doc(collection(db, 'assignments'));
-            
-            const docId = docRef.id;
-
-            if (file) {
-                const storageRef = ref(storage, `assignments/${docId}/${file.name}`);
-                await uploadBytes(storageRef, file);
-                documentURL = await getDownloadURL(storageRef);
-                documentName = file.name;
-            }
-
-            const dataToSave = {
+            const metadataToSave = {
                 ...currentAssignment,
-                documentURL: documentURL,
-                documentName: documentName,
+                id: docId,
                 facultyId: currentUser.uid,
                 facultyName: currentUser.displayName || 'Faculty',
             };
 
-            if (isEditMode) {
-                await updateDoc(docRef, dataToSave);
-                toast({ title: "Success", description: "Assignment updated." });
-            } else {
-                await setDoc(docRef, {
-                    ...dataToSave,
-                    id: docId,
-                    createdAt: serverTimestamp()
-                });
-                toast({ title: "Success", description: "New assignment added." });
+            // Don't save documentURL/Name in the first pass
+            delete metadataToSave.documentURL;
+            delete metadataToSave.documentName;
+
+            // In edit mode, if there's no new file, we want to preserve old file data.
+            if(isEditMode && currentAssignment.documentURL) {
+                metadataToSave.documentURL = currentAssignment.documentURL;
+                metadataToSave.documentName = currentAssignment.documentName;
             }
+
+            await setDoc(assignmentRef, {
+                ...metadataToSave,
+                // Add timestamp only for new assignments
+                ...(!isEditMode && {createdAt: serverTimestamp()})
+            }, { merge: true });
+
+            if (file) {
+                console.log("Uploading file:", file.name);
+                const path = `assignments/${docId}/${file.name}`;
+                const sRef = ref(storage, path);
+                
+                await uploadBytes(sRef, file);
+                console.log("Upload complete:", file.name);
+                
+                const downloadURL = await getDownloadURL(sRef);
+                console.log("Download URL:", downloadURL);
+
+                await updateDoc(assignmentRef, {
+                    documentURL: downloadURL,
+                    documentName: file.name
+                });
+                console.log("Firestore updated with documentURL");
+            }
+            
+            toast({ title: "Success", description: `Assignment ${isEditMode ? 'updated' : 'added'} successfully.` });
             setIsDialogOpen(false);
-        } catch (error) {
-            console.error(error);
-            toast({ title: "Error", description: "Could not save changes.", variant: "destructive" });
+        } catch (error: any) {
+            console.error("Save assignment error:", error);
+            toast({ title: "Error", description: error.message || "Could not save changes.", variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
