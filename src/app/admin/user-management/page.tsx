@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Edit, Trash2, User, Search, Shield, Briefcase, GraduationCap, PlusCircle, Ticket, Mail, University, BookCopy } from "lucide-react";
+import { Edit, Trash2, User, Search, Shield, Briefcase, GraduationCap, PlusCircle, Ticket, Mail, University, BookCopy, Users } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { collection, onSnapshot, doc, deleteDoc, query, setDoc, getDocs, updateDoc, where } from 'firebase/firestore';
@@ -706,3 +706,5 @@ export default function UserManagementPage() {
         </div>
     );
 }
+
+    
