@@ -23,20 +23,10 @@ interface SidebarProps {
 export default function Sidebar({ navItems, userName, userJob, userImage, userRole, onLogout }: SidebarProps) {
     const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
-    const searchInputRef = useRef<HTMLInputElement>(null);
 
     const handleToggle = () => {
         setIsOpen(!isOpen);
     };
-    
-    const handleSearchClick = () => {
-        if (!isOpen) {
-            setIsOpen(true);
-            setTimeout(() => {
-                searchInputRef.current?.focus();
-            }, 500);
-        }
-    }
 
     const profileHref = `/profile?role=${userRole || 'student'}`;
 
@@ -48,11 +38,6 @@ export default function Sidebar({ navItems, userName, userJob, userImage, userRo
                 <i className='bx bx-menu' id="btn" onClick={handleToggle}></i>
             </div>
             <ul className="nav-list">
-                <li>
-                    <i className='bx bx-search' onClick={handleSearchClick}></i>
-                    <input type="text" placeholder="Search..." ref={searchInputRef} />
-                    <span className="tooltip">Search</span>
-                </li>
                 {navItems.map((item) => (
                     <li key={item.href}>
                         <Link href={item.href} className={pathname === item.href ? 'active' : ''}>
