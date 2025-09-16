@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Edit, Trash2, User, Search, Shield, Briefcase, GraduationCap, PlusCircle, Ticket, Mail, University, BookCopy, Users } from "lucide-react";
+import { Edit, Trash2, User, Search, Shield, Briefcase, GraduationCap, PlusCircle, Ticket, Mail, University, BookCopy, Users, Check, X, UserCheck } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { collection, onSnapshot, doc, deleteDoc, query, setDoc, getDocs, updateDoc, where } from 'firebase/firestore';
@@ -63,8 +63,10 @@ const semesters = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
 
 export default function UserManagementPage() {
     const [allStudents, setAllStudents] = useState<UserData[]>([]);
+    const [pendingStudents, setPendingStudents] = useState<UserData[]>([]);
     const [allFaculty, setAllFaculty] = useState<UserData[]>([]);
     const [filteredStudents, setFilteredStudents] = useState<UserData[]>([]);
+    const [filteredPendingStudents, setFilteredPendingStudents] = useState<UserData[]>([]);
     const [filteredFaculty, setFilteredFaculty] = useState<UserData[]>([]);
     
     const [loading, setLoading] = useState(true);
@@ -75,6 +77,7 @@ export default function UserManagementPage() {
     const isMobile = useIsMobile();
     const [isClient, setIsClient] = useState(false);
     const [activeTab, setActiveTab] = useState('students');
+    const [activeStudentTab, setActiveStudentTab] = useState('all');
 
     // Dialog state
     const [isFacultyDialogOpen, setIsFacultyDialogOpen] = useState(false);
@@ -105,19 +108,25 @@ export default function UserManagementPage() {
         const q = query(collection(db, "users"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const students: UserData[] = [];
+            const pending: UserData[] = [];
             const faculty: UserData[] = [];
             
             querySnapshot.forEach((doc) => {
                 const user = { id: doc.id, ...doc.data() } as UserData;
                 if(user.role === 'student') {
                     students.push(user);
+                    if (user.status === 'pending') {
+                        pending.push(user);
+                    }
                 } else if (user.role === 'faculty') {
                     faculty.push(user);
                 }
             });
             setAllStudents(students);
+            setPendingStudents(pending);
             setAllFaculty(faculty);
             setFilteredStudents(students);
+            setFilteredPendingStudents(pending);
             setFilteredFaculty(faculty);
             setLoading(false);
         }, (error) => {
@@ -149,21 +158,27 @@ export default function UserManagementPage() {
     }, [currentUser, toast]);
 
     useEffect(() => {
+        let results;
         if (activeTab === 'students') {
-            const results = allStudents.filter(user =>
+            const sourceData = activeStudentTab === 'all' ? allStudents : pendingStudents;
+            results = sourceData.filter(user =>
                 (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (user.usn && user.usn.toLowerCase().includes(searchTerm.toLowerCase()))
             );
-            setFilteredStudents(results);
-        } else {
-             const results = allFaculty.filter(user =>
+            if (activeStudentTab === 'all') {
+                setFilteredStudents(results);
+            } else {
+                setFilteredPendingStudents(results);
+            }
+        } else { // faculty tab
+             results = allFaculty.filter(user =>
                 (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
             );
             setFilteredFaculty(results);
         }
-    }, [searchTerm, allStudents, allFaculty, activeTab]);
+    }, [searchTerm, allStudents, pendingStudents, allFaculty, activeTab, activeStudentTab]);
 
     const handleDeleteUser = async (userId: string) => {
         try {
@@ -181,6 +196,20 @@ export default function UserManagementPage() {
         }
     };
     
+    const handleApproval = async (id: string, newStatus: 'approved' | 'declined') => {
+        const studentRef = doc(db, 'users', id);
+        try {
+            await updateDoc(studentRef, { status: newStatus });
+            toast({
+                title: `User ${newStatus}`,
+                description: `The student account has been successfully ${newStatus}.`,
+            });
+        } catch (error) {
+            console.error("Error updating status: ", error);
+            toast({ title: "Error", description: "Failed to update user status. You may not have permission.", variant: "destructive" });
+        }
+    };
+
     const openAddFacultyDialog = () => {
         setIsEditMode(false);
         setCurrentUserToManage({ branch: [], semesters: [] });
@@ -245,7 +274,7 @@ export default function UserManagementPage() {
     };
 
 
-    const renderStudentsView = () => (
+    const renderAllStudentsView = () => (
         isMobile ? (
             <div className="space-y-4">
                 {filteredStudents.map(user => (
@@ -351,6 +380,94 @@ export default function UserManagementPage() {
             </Table>
         )
     );
+    
+     const renderPendingStudentsView = () => (
+        isMobile ? (
+            <div className="space-y-4">
+                {filteredPendingStudents.map(student => (
+                    <Card key={student.id} className="glassmorphism">
+                        <CardContent className="p-4">
+                            <div className="flex items-start gap-4">
+                                <Avatar>
+                                    <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${student.name}`} alt={student.name} />
+                                    <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 space-y-2">
+                                     <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-semibold">{student.name}</p>
+                                            <p className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" />{student.email}</p>
+                                        </div>
+                                         <Badge variant="secondary" className="capitalize">{student.status}</Badge>
+                                    </div>
+                                    <div className="text-sm text-muted-foreground space-y-1">
+                                        <p className="flex items-center gap-1.5"><Ticket className="h-4 w-4" /> {student.usn}</p>
+                                        <p className="flex items-center gap-1.5"><University className="h-4 w-4" /> {student.branch}</p>
+                                    </div>
+                                    <div className="flex gap-2 justify-end pt-2">
+                                        <Button size="sm" variant="outline" className="text-green-500 border-green-500/50 hover:bg-green-500/10 hover:text-green-600 flex-1" onClick={() => handleApproval(student.id, 'approved')}>
+                                            <Check className="mr-2 h-4 w-4" /> Approve
+                                        </Button>
+                                        <Button size="sm" variant="outline" className="text-red-500 border-red-500/50 hover:bg-red-500/10 hover:text-red-600 flex-1" onClick={() => handleApproval(student.id, 'declined')}>
+                                            <X className="mr-2 h-4 w-4" /> Decline
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        ) : (
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Student</TableHead>
+                        <TableHead>USN</TableHead>
+                        <TableHead>Branch</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {filteredPendingStudents.map(student => (
+                        <TableRow key={student.id}>
+                            <TableCell>
+                                <div className="flex items-center gap-3">
+                                    <Avatar>
+                                        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${student.name}`} alt={student.name} />
+                                        <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <div className="font-medium">{student.name}</div>
+                                        <div className="text-muted-foreground text-xs">{student.email}</div>
+                                    </div>
+                                </div>
+                            </TableCell>
+                            <TableCell className="font-mono">{student.usn}</TableCell>
+                            <TableCell>{student.branch as string}</TableCell>
+                            <TableCell>
+                                <Badge variant="secondary" className="capitalize">
+                                    {student.status}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <div className="flex gap-2 justify-end">
+                                    <Button size="icon" variant="outline" className="h-8 w-8 text-green-500 hover:bg-green-500/10 hover:text-green-600" onClick={() => handleApproval(student.id, 'approved')}>
+                                        <Check className="h-4 w-4" />
+                                    </Button>
+                                    <Button size="icon" variant="outline" className="h-8 w-8 text-red-500 hover:bg-red-500/10 hover:text-red-600" onClick={() => handleApproval(student.id, 'declined')}>
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        )
+    );
+
 
     const renderFacultyView = () => (
          isMobile ? (
@@ -535,7 +652,35 @@ export default function UserManagementPage() {
                         ) : (
                             <>
                                 <TabsContent value="students">
-                                    {filteredStudents.length > 0 ? renderStudentsView() : <div className="text-center text-muted-foreground py-8">No students found.</div>}
+                                    <Tabs value={activeStudentTab} onValueChange={setActiveStudentTab}>
+                                        <div className="flex justify-between items-end">
+                                            <div>
+                                                <CardTitle className="text-xl">Student Lists</CardTitle>
+                                                <CardDescription>Switch between all students and those pending approval.</CardDescription>
+                                            </div>
+                                            <TabsList>
+                                                <TabsTrigger value="all">
+                                                    <Users className="mr-2 h-4 w-4" />
+                                                    All Students
+                                                </TabsTrigger>
+                                                <TabsTrigger value="pending" className="relative">
+                                                     <UserCheck className="mr-2 h-4 w-4" />
+                                                    Pending Approval
+                                                    {pendingStudents.length > 0 && (
+                                                        <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center">
+                                                            {pendingStudents.length}
+                                                        </Badge>
+                                                    )}
+                                                </TabsTrigger>
+                                            </TabsList>
+                                        </div>
+                                        <TabsContent value="all" className="mt-4">
+                                            {filteredStudents.length > 0 ? renderAllStudentsView() : <div className="text-center text-muted-foreground py-8">No students found.</div>}
+                                        </TabsContent>
+                                         <TabsContent value="pending" className="mt-4">
+                                            {filteredPendingStudents.length > 0 ? renderPendingStudentsView() : <div className="text-center text-muted-foreground py-8">No pending students found.</div>}
+                                        </TabsContent>
+                                    </Tabs>
                                 </TabsContent>
                                 <TabsContent value="faculty">
                                     {filteredFaculty.length > 0 ? renderFacultyView() : <div className="text-center text-muted-foreground py-8">No faculty found.</div>}
@@ -706,5 +851,3 @@ export default function UserManagementPage() {
         </div>
     );
 }
-
-    
