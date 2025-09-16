@@ -40,7 +40,6 @@ const facultyNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: 'bx-grid-alt' },
-  { href: '/admin/approve', label: 'Approve Users', icon: 'bx-user-check' },
   { href: '/admin/user-management', label: 'User Management', icon: 'bx-group' },
   { href: '/admin/branch-management', label: 'Branch Management', icon: 'bx-network-chart' },
   { href: '/admin/timetable', label: 'Timetable', icon: 'bx-calendar' },

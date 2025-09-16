@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Edit, Trash2, User, Search, Shield, Briefcase, GraduationCap, PlusCircle } from "lucide-react";
+import { Edit, Trash2, User, Search, Shield, Briefcase, GraduationCap, PlusCircle, Ticket, Mail, University, BookCopy } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { collection, onSnapshot, doc, deleteDoc, query, setDoc, getDocs, updateDoc, where } from 'firebase/firestore';
@@ -33,7 +33,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import AnimatedPasswordInput from '@/components/ui/animated-password-input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { BookCopy } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 type UserRole = 'student' | 'faculty' | 'admin';
@@ -62,8 +62,11 @@ const semesters = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
 
 
 export default function UserManagementPage() {
-    const [users, setUsers] = useState<UserData[]>([]);
-    const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
+    const [allStudents, setAllStudents] = useState<UserData[]>([]);
+    const [allFaculty, setAllFaculty] = useState<UserData[]>([]);
+    const [filteredStudents, setFilteredStudents] = useState<UserData[]>([]);
+    const [filteredFaculty, setFilteredFaculty] = useState<UserData[]>([]);
+    
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const { toast } = useToast();
@@ -71,6 +74,7 @@ export default function UserManagementPage() {
     const [permissionError, setPermissionError] = useState(false);
     const isMobile = useIsMobile();
     const [isClient, setIsClient] = useState(false);
+    const [activeTab, setActiveTab] = useState('students');
 
     // Dialog state
     const [isFacultyDialogOpen, setIsFacultyDialogOpen] = useState(false);
@@ -100,12 +104,21 @@ export default function UserManagementPage() {
         setPermissionError(false);
         const q = query(collection(db, "users"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const fetchedUsers: UserData[] = [];
+            const students: UserData[] = [];
+            const faculty: UserData[] = [];
+            
             querySnapshot.forEach((doc) => {
-                fetchedUsers.push({ id: doc.id, ...doc.data() } as UserData);
+                const user = { id: doc.id, ...doc.data() } as UserData;
+                if(user.role === 'student') {
+                    students.push(user);
+                } else if (user.role === 'faculty') {
+                    faculty.push(user);
+                }
             });
-            setUsers(fetchedUsers);
-            setFilteredUsers(fetchedUsers);
+            setAllStudents(students);
+            setAllFaculty(faculty);
+            setFilteredStudents(students);
+            setFilteredFaculty(faculty);
             setLoading(false);
         }, (error) => {
             console.error("Error fetching users: ", error);
@@ -136,13 +149,21 @@ export default function UserManagementPage() {
     }, [currentUser, toast]);
 
     useEffect(() => {
-        const results = users.filter(user =>
-            (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (user.usn && user.usn.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
-        setFilteredUsers(results);
-    }, [searchTerm, users]);
+        if (activeTab === 'students') {
+            const results = allStudents.filter(user =>
+                (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (user.usn && user.usn.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+            setFilteredStudents(results);
+        } else {
+             const results = allFaculty.filter(user =>
+                (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+            setFilteredFaculty(results);
+        }
+    }, [searchTerm, allStudents, allFaculty, activeTab]);
 
     const handleDeleteUser = async (userId: string) => {
         try {
@@ -159,15 +180,6 @@ export default function UserManagementPage() {
             });
         }
     };
-    
-    const RoleIcon = ({ role }: { role: UserRole }) => {
-        switch (role) {
-            case 'admin': return <Shield className="h-4 w-4 text-red-400" />;
-            case 'faculty': return <Briefcase className="h-4 w-4 text-purple-400" />;
-            case 'student': return <GraduationCap className="h-4 w-4 text-blue-400" />;
-            default: return <User className="h-4 w-4" />;
-        }
-    }
     
     const openAddFacultyDialog = () => {
         setIsEditMode(false);
@@ -233,153 +245,220 @@ export default function UserManagementPage() {
     };
 
 
-    const renderDesktopView = () => (
-         <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Identifier</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {filteredUsers.length === 0 ? (
-                    <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                            {permissionError ? "You do not have permission to view users." : "No users found."}
-                        </TableCell>
-                    </TableRow>
-                ) : (
-                    filteredUsers.map(user => (
-                    <TableRow key={user.id}>
-                        <TableCell>
-                             <div className="flex items-center gap-3">
+    const renderStudentsView = () => (
+        isMobile ? (
+            <div className="space-y-4">
+                {filteredStudents.map(user => (
+                    <Card key={user.id} className="glassmorphism">
+                        <CardContent className="p-4">
+                            <div className="flex items-start gap-4">
                                 <Avatar>
                                     <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`} alt={user.name || 'U'} />
                                     <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
                                 </Avatar>
-                                <div>
-                                    <div className="font-medium">{user.name || 'N/A'}</div>
-                                    <div className="text-muted-foreground text-xs">{user.email}</div>
+                                <div className="flex-1 space-y-2">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-semibold">{user.name}</p>
+                                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                                        </div>
+                                        <Badge variant={user.status === 'approved' ? 'default' : 'secondary'} className="capitalize">{user.status}</Badge>
+                                    </div>
+                                    <div className="text-sm text-muted-foreground space-y-1 pt-1 border-t">
+                                        <p className="flex items-center gap-1.5"><Ticket className="h-4 w-4" /> {user.usn}</p>
+                                        <p className="flex items-center gap-1.5"><University className="h-4 w-4" /> {user.branch as string}</p>
+                                    </div>
+                                    <div className="flex gap-2 justify-end pt-2">
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button size="sm" variant="destructive" className="flex-1">
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>This will permanently delete the student's record.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
                                 </div>
                             </div>
-                        </TableCell>
-                        <TableCell className="font-mono">{user.role === 'student' ? user.usn : user.title || 'N/A'}</TableCell>
-                        <TableCell>
-                            <div className="flex items-center gap-2">
-                                <RoleIcon role={user.role} />
-                                <span className="capitalize">{user.role}</span>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        ) : (
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Student</TableHead>
+                        <TableHead>USN</TableHead>
+                        <TableHead>Branch</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {filteredStudents.map(user => (
+                        <TableRow key={user.id}>
+                            <TableCell>
+                                <div className="flex items-center gap-3">
+                                    <Avatar>
+                                        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`} alt={user.name || 'U'} />
+                                        <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <div className="font-medium">{user.name || 'N/A'}</div>
+                                        <div className="text-muted-foreground text-xs">{user.email}</div>
+                                    </div>
+                                </div>
+                            </TableCell>
+                            <TableCell className="font-mono">{user.usn}</TableCell>
+                            <TableCell>{user.branch as string}</TableCell>
+                            <TableCell>
+                                <Badge variant={user.status === 'pending' ? 'secondary' : user.status === 'approved' ? 'default' : 'destructive'} className="capitalize">
+                                    {user.status}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button size="icon" variant="destructive" className="h-8 w-8">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>This will permanently delete the student's record.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        )
+    );
+
+    const renderFacultyView = () => (
+         isMobile ? (
+            <div className="space-y-4">
+                {filteredFaculty.map(user => (
+                    <Card key={user.id} className="glassmorphism">
+                        <CardContent className="p-4">
+                            <div className="flex items-start gap-4">
+                                <Avatar>
+                                    <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`} alt={user.name || 'U'} />
+                                    <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 space-y-2">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-semibold">{user.name}</p>
+                                            {user.title && <p className="text-xs text-muted-foreground">{user.title}</p>}
+                                        </div>
+                                    </div>
+                                    <div className="text-sm text-muted-foreground space-y-1 pt-1 border-t">
+                                        <p className="flex items-center gap-1.5"><Mail className="h-4 w-4" /> {user.email}</p>
+                                    </div>
+                                    <div className="flex gap-2 justify-end pt-2">
+                                        <Button size="sm" variant="outline" className="flex-1" onClick={() => openEditFacultyDialog(user)}>
+                                            <Edit className="mr-2 h-4 w-4" /> Edit
+                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button size="sm" variant="destructive" className="flex-1">
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>This will permanently delete the faculty member.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </div>
                             </div>
-                        </TableCell>
-                        <TableCell>
-                            <Badge variant={
-                                user.status === 'pending' ? 'secondary' :
-                                user.status === 'approved' ? 'default' : 'destructive'
-                            } className="capitalize">
-                                {user.status}
-                            </Badge>
-                        </TableCell>
-                        <TableCell className="text-right flex gap-2 justify-end">
-                              {user.role === 'faculty' && (
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        ) : (
+             <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Faculty Member</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Branch(es)</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {filteredFaculty.map(user => (
+                        <TableRow key={user.id}>
+                            <TableCell>
+                                <div className="flex items-center gap-3">
+                                    <Avatar>
+                                        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`} alt={user.name || 'U'} />
+                                        <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <div className="font-medium">{user.name || 'N/A'}</div>
+                                        <div className="text-muted-foreground text-xs">{user.email}</div>
+                                    </div>
+                                </div>
+                            </TableCell>
+                            <TableCell>{user.title || 'N/A'}</TableCell>
+                            <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                    {Array.isArray(user.branch) && user.branch.map(b => <Badge key={b} variant="secondary">{b}</Badge>)}
+                                </div>
+                            </TableCell>
+                            <TableCell className="text-right flex gap-2 justify-end">
                                 <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => openEditFacultyDialog(user)}>
                                     <Edit className="h-4 w-4" />
                                 </Button>
-                               )}
-                               <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button size="icon" variant="destructive" className="h-8 w-8">
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This action cannot be undone. This will permanently delete the user
-                                        and remove their data from our servers.
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>Continue</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </TableCell>
-                    </TableRow>
-                )))}
-            </TableBody>
-        </Table>
-    );
-
-    const renderMobileView = () => (
-         <div className="space-y-4">
-            {filteredUsers.length === 0 ? (
-                 <div className="text-center text-muted-foreground py-8">
-                    {permissionError ? "You do not have permission to view users." : "No users found."}
-                </div>
-            ) : (
-                filteredUsers.map(user => (
-                <Card key={user.id} className="glassmorphism">
-                    <CardContent className="p-4">
-                         <div className="flex items-start gap-4">
-                            <Avatar>
-                                <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`} alt={user.name || 'U'} />
-                                <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
-                            </Avatar>
-                             <div className="flex-1 space-y-2">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="font-semibold">{user.name}</p>
-                                        <p className="text-xs text-muted-foreground">{user.email}</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <RoleIcon role={user.role} />
-                                        <Badge variant={
-                                            user.status === 'pending' ? 'secondary' :
-                                            user.status === 'approved' ? 'default' : 'destructive'
-                                        } className="capitalize">
-                                            {user.status}
-                                        </Badge>
-                                    </div>
-                                </div>
-                                <div className="text-sm text-muted-foreground pt-1 border-t">
-                                     {user.usn || user.title || 'No Identifier'}
-                                </div>
-                                <div className="flex gap-2 justify-end pt-2">
-                                    {user.role === 'faculty' && (
-                                         <Button size="sm" variant="outline" className="flex-1" onClick={() => openEditFacultyDialog(user)}>
-                                            <Edit className="mr-2 h-4 w-4" /> Edit
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button size="icon" variant="destructive" className="h-8 w-8">
+                                            <Trash2 className="h-4 w-4" />
                                         </Button>
-                                    )}
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                             <Button size="sm" variant="destructive" className="flex-1">
-                                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This will permanently delete the user.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>Delete</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </div>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            )))}
-        </div>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>This will permanently delete the faculty member's record.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>Continue</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        )
     );
 
 
@@ -388,11 +467,11 @@ export default function UserManagementPage() {
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground flex items-center gap-2">
-                        <User />
+                        <Users />
                         User Management
                     </h1>
                     <p className="text-muted-foreground mt-1">
-                        View, edit, and manage all users in the system.
+                        Manage all students and faculty in the system.
                     </p>
                 </div>
                  <DropdownMenu>
@@ -417,30 +496,55 @@ export default function UserManagementPage() {
                 </DropdownMenu>
             </div>
             
-            <Card>
-                <CardHeader>
-                    <CardTitle>All Registered Users</CardTitle>
-                    <CardDescription>
-                        A complete list of students, faculty, and administrators.
-                    </CardDescription>
-                     <div className="relative pt-2">
-                        <AnimatedSearchBar
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            placeholder="Search by name, email, or USN..."
-                        />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {loading || !isClient ? (
-                        <div className="space-y-4">
-                            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <Card>
+                    <CardHeader>
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
+                            <div>
+                                <CardTitle>User Lists</CardTitle>
+                                <CardDescription>Switch between student and faculty management.</CardDescription>
+                                <TabsList className="mt-4">
+                                    <TabsTrigger value="students">
+                                        <GraduationCap className="mr-2 h-4 w-4" />
+                                        Students
+                                    </TabsTrigger>
+                                    <TabsTrigger value="faculty">
+                                        <Briefcase className="mr-2 h-4 w-4" />
+                                        Faculty
+                                    </TabsTrigger>
+                                </TabsList>
+                            </div>
+                             <div className="relative pt-2 w-full sm:w-auto">
+                                <AnimatedSearchBar
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    placeholder="Search users..."
+                                />
+                            </div>
                         </div>
-                    ) : (
-                        isMobile ? renderMobileView() : renderDesktopView()
-                    )}
-                </CardContent>
-            </Card>
+                    </CardHeader>
+                    <CardContent>
+                         {loading || !isClient ? (
+                            <div className="space-y-4">
+                                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+                            </div>
+                        ) : permissionError ? (
+                            <div className="text-center text-destructive py-8">
+                                You do not have sufficient permissions to view users.
+                            </div>
+                        ) : (
+                            <>
+                                <TabsContent value="students">
+                                    {filteredStudents.length > 0 ? renderStudentsView() : <div className="text-center text-muted-foreground py-8">No students found.</div>}
+                                </TabsContent>
+                                <TabsContent value="faculty">
+                                    {filteredFaculty.length > 0 ? renderFacultyView() : <div className="text-center text-muted-foreground py-8">No faculty found.</div>}
+                                </TabsContent>
+                            </>
+                        )}
+                    </CardContent>
+                </Card>
+            </Tabs>
 
             <Dialog open={isFacultyDialogOpen} onOpenChange={setIsFacultyDialogOpen}>
                 <DialogContent className="sm:max-w-md">
