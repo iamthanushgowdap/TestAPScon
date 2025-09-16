@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Edit, Trash2, User, Search, Shield, Briefcase, GraduationCap, PlusCircle } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { collection, onSnapshot, doc, deleteDoc, query, setDoc, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, query, setDoc, getDocs, updateDoc, where } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
