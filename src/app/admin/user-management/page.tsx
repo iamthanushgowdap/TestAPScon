@@ -52,9 +52,10 @@ interface UserData {
     usn?: string;
     role: UserRole;
     status: UserStatus;
-    branch?: string;
+    branch?: string | string[];
     semesters?: string[];
     title?: string;
+    phone?: string;
 }
 
 const semesters = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
@@ -74,7 +75,7 @@ export default function UserManagementPage() {
     // Dialog state
     const [isFacultyDialogOpen, setIsFacultyDialogOpen] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
-    const [currentFaculty, setCurrentFaculty] = useState<Partial<UserData & { password?: string }>>({});
+    const [currentUserToManage, setCurrentUserToManage] = useState<Partial<UserData & { password?: string }>>({});
     const [branches, setBranches] = useState<Branch[]>([]);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -170,17 +171,28 @@ export default function UserManagementPage() {
     
     const openAddFacultyDialog = () => {
         setIsEditMode(false);
-        setCurrentFaculty({ branch: [], semesters: [] });
+        setCurrentUserToManage({ branch: [], semesters: [] });
+        setIsFacultyDialogOpen(true);
+    };
+    
+    const openEditFacultyDialog = (facultyMember: UserData) => {
+        setIsEditMode(true);
+        const branchArray = Array.isArray(facultyMember.branch) 
+            ? facultyMember.branch 
+            : (typeof facultyMember.branch === 'string' ? [facultyMember.branch] : []);
+        const semesterArray = Array.isArray(facultyMember.semesters) ? facultyMember.semesters : [];
+        setCurrentUserToManage({...facultyMember, branch: branchArray, semesters: semesterArray});
         setIsFacultyDialogOpen(true);
     };
 
+
     const handleFacultySaveChanges = async () => {
-        if (!currentFaculty.name || !currentFaculty.email) {
+        if (!currentUserToManage.name || !currentUserToManage.email) {
             toast({ title: "Error", description: "Name and email are required.", variant: "destructive" });
             return;
         }
 
-        if (!isEditMode && (!currentFaculty.password || currentFaculty.password.length < 6)) {
+        if (!isEditMode && (!currentUserToManage.password || currentUserToManage.password.length < 6)) {
              toast({ title: "Error", description: "A password of at least 6 characters is required for new faculty.", variant: "destructive" });
             return;
         }
@@ -188,22 +200,22 @@ export default function UserManagementPage() {
         setIsSaving(true);
         try {
             const dataToSave = {
-                name: currentFaculty.name,
-                email: currentFaculty.email,
-                phone: currentFaculty.phone || '',
-                branch: currentFaculty.branch || [],
-                semesters: currentFaculty.semesters || [],
-                title: currentFaculty.title || '',
+                name: currentUserToManage.name,
+                email: currentUserToManage.email,
+                phone: currentUserToManage.phone || '',
+                branch: currentUserToManage.branch || [],
+                semesters: currentUserToManage.semesters || [],
+                title: currentUserToManage.title || '',
                 role: 'faculty',
                 status: 'approved',
             };
 
             if (isEditMode) {
-                const docRef = doc(db, 'users', currentFaculty.id!);
+                const docRef = doc(db, 'users', currentUserToManage.id!);
                 await updateDoc(docRef, dataToSave);
                 toast({ title: "Success", description: "Faculty member updated." });
             } else {
-                const userCredential = await createUserWithEmailAndPassword(auth, currentFaculty.email, currentFaculty.password!);
+                const userCredential = await createUserWithEmailAndPassword(auth, currentUserToManage.email, currentUserToManage.password!);
                 const user = userCredential.user;
                 
                 await setDoc(doc(db, "users", user.uid), {
@@ -269,7 +281,12 @@ export default function UserManagementPage() {
                                 {user.status}
                             </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right flex gap-2 justify-end">
+                              {user.role === 'faculty' && (
+                                <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => openEditFacultyDialog(user)}>
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                               )}
                                <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button size="icon" variant="destructive" className="h-8 w-8">
@@ -332,6 +349,11 @@ export default function UserManagementPage() {
                                      {user.usn || user.title || 'No Identifier'}
                                 </div>
                                 <div className="flex gap-2 justify-end pt-2">
+                                    {user.role === 'faculty' && (
+                                         <Button size="sm" variant="outline" className="flex-1" onClick={() => openEditFacultyDialog(user)}>
+                                            <Edit className="mr-2 h-4 w-4" /> Edit
+                                        </Button>
+                                    )}
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                              <Button size="sm" variant="destructive" className="flex-1">
@@ -423,9 +445,9 @@ export default function UserManagementPage() {
             <Dialog open={isFacultyDialogOpen} onOpenChange={setIsFacultyDialogOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Add New Faculty</DialogTitle>
+                        <DialogTitle>{isEditMode ? 'Edit Faculty' : 'Add New Faculty'}</DialogTitle>
                         <DialogDescription>
-                           Enter the details for the new faculty member.
+                           {isEditMode ? "Update the details for this faculty member." : "Enter the details for the new faculty member."}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
@@ -433,8 +455,8 @@ export default function UserManagementPage() {
                             <Label htmlFor="name" className="text-right">Name</Label>
                             <Input 
                                 id="name" 
-                                value={currentFaculty.name || ''} 
-                                onChange={(e) => setCurrentFaculty({...currentFaculty, name: e.target.value })}
+                                value={currentUserToManage.name || ''} 
+                                onChange={(e) => setCurrentUserToManage({...currentUserToManage, name: e.target.value })}
                                 className="col-span-3" />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -442,30 +464,33 @@ export default function UserManagementPage() {
                             <Input 
                                 id="email" 
                                 type="email"
-                                value={currentFaculty.email || ''} 
-                                onChange={(e) => setCurrentFaculty({...currentFaculty, email: e.target.value })}
+                                value={currentUserToManage.email || ''} 
+                                onChange={(e) => setCurrentUserToManage({...currentUserToManage, email: e.target.value })}
                                 className="col-span-3"
+                                readOnly={isEditMode}
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="password" className="text-right">Password</Label>
-                            <div className="col-span-3">
-                               <AnimatedPasswordInput 
-                                    id="password" 
-                                    placeholder="Initial password"
-                                    value={currentFaculty.password || ''}
-                                    onChange={(e) => setCurrentFaculty({...currentFaculty, password: e.target.value })}
-                               />
+                        {!isEditMode && (
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="password" className="text-right">Password</Label>
+                                <div className="col-span-3">
+                                   <AnimatedPasswordInput 
+                                        id="password" 
+                                        placeholder="Initial password"
+                                        value={currentUserToManage.password || ''}
+                                        onChange={(e) => setCurrentUserToManage({...currentUserToManage, password: e.target.value })}
+                                   />
+                                </div>
                             </div>
-                        </div>
+                        )}
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="phone" className="text-right">Phone</Label>
                             <Input 
                                 id="phone" 
                                 type="tel"
                                 placeholder="+91 98765 43210"
-                                value={currentFaculty.phone || ''} 
-                                onChange={(e) => setCurrentFaculty({...currentFaculty, phone: e.target.value })}
+                                value={currentUserToManage.phone || ''} 
+                                onChange={(e) => setCurrentUserToManage({...currentUserToManage, phone: e.target.value })}
                                 className="col-span-3"
                             />
                         </div>
@@ -474,8 +499,8 @@ export default function UserManagementPage() {
                             <Input 
                                 id="title" 
                                 placeholder="e.g., HOD, Asst. Professor"
-                                value={currentFaculty.title || ''} 
-                                onChange={(e) => setCurrentFaculty({...currentFaculty, title: e.target.value })}
+                                value={currentUserToManage.title || ''} 
+                                onChange={(e) => setCurrentUserToManage({...currentUserToManage, title: e.target.value })}
                                 className="col-span-3"
                             />
                         </div>
@@ -487,17 +512,17 @@ export default function UserManagementPage() {
                                         <p className="text-center text-sm text-muted-foreground py-2">No branches found.</p>
                                      ) : (
                                         branches.map((branch) => {
-                                            const isSelected = currentFaculty.branch?.includes(branch.name) ?? false;
+                                            const isSelected = (currentUserToManage.branch as string[] | undefined)?.includes(branch.name) ?? false;
                                             return (
                                                 <div 
                                                     key={branch.id} 
                                                     className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent cursor-pointer"
                                                     onClick={() => {
-                                                        const selectedBranches = (currentFaculty.branch as string[] | undefined) || [];
+                                                        const selectedBranches = (currentUserToManage.branch as string[] | undefined) || [];
                                                         if (isSelected) {
-                                                            setCurrentFaculty({ ...currentFaculty, branch: selectedBranches.filter(b => b !== branch.name) });
+                                                            setCurrentUserToManage({ ...currentUserToManage, branch: selectedBranches.filter(b => b !== branch.name) });
                                                         } else {
-                                                            setCurrentFaculty({ ...currentFaculty, branch: [...selectedBranches, branch.name] });
+                                                            setCurrentUserToManage({ ...currentUserToManage, branch: [...selectedBranches, branch.name] });
                                                         }
                                                     }}
                                                 >
@@ -515,9 +540,9 @@ export default function UserManagementPage() {
                                         })
                                      )}
                                 </div>
-                                {currentFaculty.branch && currentFaculty.branch?.length > 0 && (
+                                {currentUserToManage.branch && (currentUserToManage.branch as string[]).length > 0 && (
                                     <div className="flex flex-wrap gap-1 mt-2">
-                                        {(currentFaculty.branch as string[]).map(b => (
+                                        {(currentUserToManage.branch as string[]).map(b => (
                                             <Badge key={b} variant="secondary">{b}</Badge>
                                         ))}
                                     </div>
@@ -529,17 +554,17 @@ export default function UserManagementPage() {
                              <div className="col-span-3">
                                 <div className="max-h-32 overflow-y-auto space-y-2 border rounded-md p-2">
                                     {semesters.map((semester) => {
-                                        const isSelected = currentFaculty.semesters?.includes(semester) ?? false;
+                                        const isSelected = currentUserToManage.semesters?.includes(semester) ?? false;
                                         return (
                                              <div 
                                                 key={semester} 
                                                 className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent cursor-pointer"
                                                 onClick={() => {
-                                                    const selectedSemesters = currentFaculty.semesters || [];
+                                                    const selectedSemesters = currentUserToManage.semesters || [];
                                                     if (isSelected) {
-                                                        setCurrentFaculty({ ...currentFaculty, semesters: selectedSemesters.filter(s => s !== semester) });
+                                                        setCurrentUserToManage({ ...currentUserToManage, semesters: selectedSemesters.filter(s => s !== semester) });
                                                     } else {
-                                                        setCurrentFaculty({ ...currentFaculty, semesters: [...selectedSemesters, semester] });
+                                                        setCurrentUserToManage({ ...currentUserToManage, semesters: [...selectedSemesters, semester] });
                                                     }
                                                 }}
                                             >
@@ -556,9 +581,9 @@ export default function UserManagementPage() {
                                         );
                                     })}
                                 </div>
-                                 {currentFaculty.semesters && currentFaculty.semesters?.length > 0 && (
+                                 {currentUserToManage.semesters && currentUserToManage.semesters?.length > 0 && (
                                     <div className="flex flex-wrap gap-1 mt-2">
-                                        {currentFaculty.semesters.map(s => (
+                                        {currentUserToManage.semesters.map(s => (
                                             <Badge key={s} variant="outline">Sem {s}</Badge>
                                         ))}
                                     </div>

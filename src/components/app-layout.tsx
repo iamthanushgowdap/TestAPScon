@@ -42,7 +42,6 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: 'bx-grid-alt' },
   { href: '/admin/approve', label: 'Approve Users', icon: 'bx-user-check' },
   { href: '/admin/user-management', label: 'User Management', icon: 'bx-group' },
-  { href: '/admin/faculty-management', label: 'Faculty Management', icon: 'bx-briefcase' },
   { href: '/admin/branch-management', label: 'Branch Management', icon: 'bx-network-chart' },
   { href: '/admin/timetable', label: 'Timetable', icon: 'bx-calendar' },
   { href: '/admin/assignments', label: 'Assignments', icon: 'bx-upload' },
