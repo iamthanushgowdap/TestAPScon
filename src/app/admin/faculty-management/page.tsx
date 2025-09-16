@@ -168,12 +168,6 @@ export default function FacultyManagementPage() {
             });
         }
     };
-    
-    const openAddDialog = () => {
-        setIsEditMode(false);
-        setCurrentFaculty({ branch: [], semesters: [] });
-        setIsDialogOpen(true);
-    };
 
     const openEditDialog = (facultyMember: FacultyData) => {
         setIsEditMode(true);
@@ -214,16 +208,8 @@ export default function FacultyManagementPage() {
                 await updateDoc(docRef, dataToSave);
                 toast({ title: "Success", description: "Faculty member updated." });
             } else {
-                // Create user in Firebase Auth
-                const userCredential = await createUserWithEmailAndPassword(auth, currentFaculty.email, currentFaculty.password!);
-                const user = userCredential.user;
-                
-                // Create Firestore document with the same UID
-                await setDoc(doc(db, "users", user.uid), {
-                    ...dataToSave,
-                    createdAt: new Date(),
-                });
-                toast({ title: "Success", description: "New faculty member created successfully." });
+                // This logic is now in user-management page. This dialog is only for editing.
+                throw new Error("Cannot create a new user from this dialog.");
             }
             setIsDialogOpen(false);
         } catch (error: any) {
@@ -234,7 +220,7 @@ export default function FacultyManagementPage() {
     };
     
     const renderBadges = (data: string[] | undefined, variant: "secondary" | "outline" = "secondary") => {
-        if (!data) {
+        if (!data || data.length === 0) {
             return <Badge variant="outline">N/A</Badge>;
         }
         return data.map(item => <Badge key={item} variant={variant}>{item}</Badge>);
@@ -384,13 +370,9 @@ export default function FacultyManagementPage() {
                         Faculty Management
                     </h1>
                     <p className="text-muted-foreground mt-1">
-                        Add, view, edit, and manage all faculty members.
+                        View, edit, and manage all faculty members.
                     </p>
                 </div>
-                 <Button onClick={openAddDialog} className="shrink-0">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Faculty
-                </Button>
             </div>
             
             <Card>

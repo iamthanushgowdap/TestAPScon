@@ -31,7 +31,6 @@ const studentNavItems: NavItem[] = [
 
 const facultyNavItems: NavItem[] = [
   { href: '/faculty/dashboard', label: 'Dashboard', icon: 'bx-grid-alt' },
-  { href: '/faculty/approve-students', label: 'Approve Students', icon: 'bx-user-check' },
   { href: '/faculty/student-management', label: 'Student Management', icon: 'bx-group' },
   { href: '/faculty/timetable', label: 'Timetable', icon: 'bx-calendar' },
   { href: '/faculty/assignments', label: 'Assignments', icon: 'bx-upload' },
