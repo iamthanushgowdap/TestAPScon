@@ -6,13 +6,12 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  "projectId": "apsconnect-ceraai-companion",
-  "appId": "1:702024508379:web:68ab7e886fadd9e45c3dfe",
-  "storageBucket": "apsconnect-ceraai-companion.firebasestorage.app",
-  "apiKey": "AIzaSyACKMwMIjrnU5ZsKhp53to9BUhMQ1jWVtY",
-  "authDomain": "apsconnect-ceraai-companion.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "702024508379"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase
