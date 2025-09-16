@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -37,9 +38,16 @@ service cloud.firestore {
       allow list: if isOneOfRoles(['admin', 'faculty']);
       allow get: if isAuth();
       
-      // Only the user themselves or an admin can update their profile.
-      allow update: if isOwner(userId) || isRole('admin');
-      
+      // Allow update if:
+      // 1. The user is updating their own profile (isOwner).
+      // 2. An admin is making the change (isRole('admin')).
+      // 3. A faculty member is updating the 'status' of a student in their own branch.
+      allow update: if isOwner(userId) || isRole('admin') || 
+        (isRole('faculty') && 
+          request.resource.data.role == 'student' &&
+          request.resource.data.branch in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
+
       // Only an admin can delete a user.
       allow delete: if isRole('admin');
     }
