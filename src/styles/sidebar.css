@@ -177,9 +177,14 @@
   background: #1d1b31;
   transition: all 0.5s ease;
   overflow: hidden;
+  display: flex;
+  align-items: center;
 }
 .sidebar.open li.profile {
   width: 250px;
+}
+.sidebar li.profile > a {
+  width: auto;
 }
 .sidebar li .profile-details {
   display: flex;
@@ -214,6 +219,7 @@
   line-height: 60px;
   border-radius: 0px;
   transition: all 0.5s ease;
+  cursor: pointer;
 }
 .sidebar.open .profile #log_out {
   width: 50px;

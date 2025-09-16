@@ -136,6 +136,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             userName={userData?.name || "User"}
             userJob={userData?.job || "Role"}
             userImage={user?.photoURL || "https://drive.google.com/uc?export=view&id=1ETZYgPpWbbBtpJnhi42_IR3vOwSOpR4z"}
+            userRole={userData?.role}
             onLogout={handleLogout}
         />
         <section className="home-section">

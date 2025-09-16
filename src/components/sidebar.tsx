@@ -16,10 +16,11 @@ interface SidebarProps {
     userName: string;
     userJob: string;
     userImage: string;
+    userRole?: string;
     onLogout: () => void;
 }
 
-export default function Sidebar({ navItems, userName, userJob, userImage, onLogout }: SidebarProps) {
+export default function Sidebar({ navItems, userName, userJob, userImage, userRole, onLogout }: SidebarProps) {
     const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -36,6 +37,8 @@ export default function Sidebar({ navItems, userName, userJob, userImage, onLogo
             }, 500);
         }
     }
+
+    const profileHref = `/profile?role=${userRole || 'student'}`;
 
     return (
         <div className={`sidebar ${isOpen ? 'open' : ''}`}>
@@ -60,13 +63,15 @@ export default function Sidebar({ navItems, userName, userJob, userImage, onLogo
                     </li>
                 ))}
                 <li className="profile">
-                    <div className="profile-details">
-                        <img src={userImage} alt="profileImg" />
-                        <div className="name_job">
-                            <div className="name">{userName}</div>
-                            <div className="job">{userJob}</div>
+                    <Link href={profileHref} className="w-full">
+                        <div className="profile-details">
+                            <img src={userImage} alt="profileImg" />
+                            <div className="name_job">
+                                <div className="name">{userName}</div>
+                                <div className="job">{userJob}</div>
+                            </div>
                         </div>
-                    </div>
+                    </Link>
                     <i className='bx bx-log-out' id="log_out" onClick={onLogout}></i>
                 </li>
             </ul>
